@@ -1,51 +1,50 @@
-import * as THREE from 'three';
-import { HexMapControls } from './controls';
+import { PerspectiveCamera, WebGLRenderer, MeshBasicMaterial, Mesh, GridHelper, Scene } from 'three';
+import { VoxelMapControls } from './controls';
+import { VoxelMap } from './map';
+import { createGui } from './gui';
+import { state } from './state'
+import { PerlinNoise, SeededRandom } from './utils';
+
 
 function main() {
+
+    state.perlin = new PerlinNoise(state.seed)
+    state.seeded = new SeededRandom(state.seed)
+
     const pixelRatio = window.devicePixelRatio
     const fov = 75;
     const near = 0.01;
-    const far = 1000;
+    const far = 100000;
     let aspect = 2;  // the canvas default
 
-    const canvas = document.querySelector('#c');
-    const renderer = new THREE.WebGLRenderer({ canvas });
+    const canvas = state.canvas = document.querySelector('#c');
+    const renderer = state.renderer = new WebGLRenderer({ canvas });
     renderer.setPixelRatio(pixelRatio);
 
-    const camera = window.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    const camera = state.camera = new PerspectiveCamera(fov, aspect, near, far);
     // camera.position.set(-1, -1, -1);
-
-    const scene = new THREE.Scene();
-
-    const boxWidth = 1;
-    const boxHeight = 1;
-    const boxDepth = 1;
-    const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
-
-    const material = new THREE.MeshBasicMaterial({ color: 0x44aa88 });
-
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
-
-    // GRID HELPER
-    scene.add(new THREE.GridHelper(5, 10, 0x888888, 0x444444))
+    const scene = state.scene = new Scene();
 
     // CONTROLS
-    let controls = window.controls = new HexMapControls(camera, renderer.domElement)
+    let controls = state.controls = new VoxelMapControls(camera, renderer.domElement)
     controls.screenSpacePanning = false;
     controls.minDistance = 10;
-    controls.maxDistance = 500;
+    controls.maxDistance = 100;
     controls.maxPolarAngle = Math.PI / 2;
 
+    // MAP
+    const map = state.map = new VoxelMap({
+        scene,
+        camera,
+        renderer
+    })
+
+    scene.add(map)
+
     // RENDER LOOP
-    function render(time) {
+    function render() {
         requestAnimationFrame(render);
-
-        time *= 0.001;  // convert time to seconds
-
-        cube.rotation.x = time;
-        cube.rotation.y = time;
-
+        map.update()
         controls.update()
         renderer.render(scene, camera);
 
@@ -60,8 +59,19 @@ function main() {
 
     window.addEventListener("resize", updateRenderSize);
 
+    createGui({
+        scene,
+        camera,
+        renderer
+    })
+
+    window.state = state
+
     updateRenderSize()
     requestAnimationFrame(render);
+
+
+
 }
 
 

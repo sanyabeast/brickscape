@@ -3,6 +3,7 @@ const path = require('path');
 module.exports = {
     entry: './src/index.js',
     mode: process.env.NODE_ENV === "production" ? "production" : "development",
+    devtool: "source-map",
     output: {
         filename: 'main.js',
         path: path.resolve(__dirname, 'dist'),
@@ -25,8 +26,19 @@ module.exports = {
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
+                    options: {
+                      sourceMaps: true
+                    }
                 },
             },
+            {
+                test: /\.tsx?$/,
+                exclude: /node_modules/,
+                use: 'ts-loader',
+            },
         ],
+    },
+    resolve: {
+        extensions: ['.tsx', '.ts', '.js'],
     },
 };

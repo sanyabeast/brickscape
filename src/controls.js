@@ -1,5 +1,5 @@
-import { MapControls } from 'three/addons/controls/MapControls.js';
+import { MapControls } from 'three/examples/jsm/controls/MapControls';
 
-export class HexMapControls extends MapControls {
+export class VoxelMapControls extends MapControls {
 
 }
