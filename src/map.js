@@ -2,6 +2,7 @@ import { Group, GridHelper, Vector2, Vector3, Raycaster, Plane } from "three";
 import { getChunkId, getNearestMultiple, logd } from "./utils";
 import { state } from "./state"
 import { Chunk } from "./chunk";
+import { debounce, throttle } from "lodash";
 
 export function getCameraLookIntersection(camera) {
     // Create a Raycaster using the camera's current position and look direction
@@ -18,19 +19,22 @@ export function getCameraLookIntersection(camera) {
 export class VoxelMap extends Group {
     camera = null
     activeChunk = null
-    chunks = null
+    
+    get chunks () {
+        return state.chunks
+    }
 
     constructor({ camera }) {
         super();
         this.camera = camera
         this.activeChunk = [null, null]
-        this.chunks = {}
         // GRID HELPER
         this.add(new GridHelper(5, 10, 0x888888, 0x444444))
+        this._updateChunks = throttle(this._updateChunks.bind(this), 100)
     }
     update() {
         let cameraLook = getCameraLookIntersection(this.camera)
-        console.log(cameraLook)
+        // console.log(cameraLook)
 
         let cx = getNearestMultiple(cameraLook.x, state.chunkSize) / state.chunkSize
         let cz = getNearestMultiple(cameraLook.z, state.chunkSize) / state.chunkSize
@@ -75,6 +79,8 @@ export class VoxelMap extends Group {
             })
 
             this.add(chunk)
+        } else {
+            chunk.refresh()
         }
 
 

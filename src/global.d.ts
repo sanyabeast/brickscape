@@ -14,5 +14,7 @@ interface IAppState {
     controls: any,
     map: any,
     perlin: any,
-    seeded: any
+    seeded: any,
+    chunks: {},
+    blocks: {}
 }

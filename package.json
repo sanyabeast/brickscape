@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@leodeslf/perlin-noise": "^1.1.2",
     "@types/lodash": "^4.14.195",
     "lodash": "^4.17.21",
     "three": "^0.154.0",
@@ -24,6 +25,7 @@
     "@types/node": "^20.4.4",
     "@types/three": "^0.154.0",
     "babel-loader": "^9.1.3",
+    "copy-webpack-plugin": "^11.0.0",
     "ts-loader": "^9.4.4",
     "typescript": "^5.1.6",
     "webpack": "^5.88.2",

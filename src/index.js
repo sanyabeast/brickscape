@@ -1,15 +1,17 @@
-import { PerspectiveCamera, WebGLRenderer, MeshBasicMaterial, Mesh, GridHelper, Scene } from 'three';
+import { PerspectiveCamera, WebGLRenderer, MeshBasicMaterial, Mesh, GridHelper, Scene, DirectionalLight } from 'three';
 import { VoxelMapControls } from './controls';
 import { VoxelMap } from './map';
 import { createGui } from './gui';
 import { state } from './state'
-import { PerlinNoise, SeededRandom } from './utils';
+import { PerlinNoise, SeededRandom, Sine } from './utils';
+import { Environment } from './environment';
 
 
 function main() {
 
     state.perlin = new PerlinNoise(state.seed)
     state.seeded = new SeededRandom(state.seed)
+    state.sine = new Sine(state.seed)
 
     const pixelRatio = window.devicePixelRatio
     const fov = 75;
@@ -24,19 +26,27 @@ function main() {
     const camera = state.camera = new PerspectiveCamera(fov, aspect, near, far);
     // camera.position.set(-1, -1, -1);
     const scene = state.scene = new Scene();
+    const environment = new Environment({
+        scene,
+        camera,
+        renderer
+    })
+
+    scene.add(environment)
+
 
     // CONTROLS
     let controls = state.controls = new VoxelMapControls(camera, renderer.domElement)
     controls.screenSpacePanning = false;
     controls.minDistance = 10;
     controls.maxDistance = 100;
-    controls.maxPolarAngle = Math.PI / 2;
+    controls.maxPolarAngle = (Math.PI / 3);
 
     // MAP
     const map = state.map = new VoxelMap({
         scene,
         camera,
-        renderer
+        renderer,
     })
 
     scene.add(map)

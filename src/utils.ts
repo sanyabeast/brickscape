@@ -26,68 +26,47 @@ export function SeededRandom(seed) {
     };
 }
 
-export function getChunkId(cx: number, cy: number): String {
-    return `${cx}_${cy}`
+export function getChunkId(cx: number, cz: number): String {
+    return `${cx}_${cz}`
+}
+
+export function getBlockId(bx: number, by: number, bz: number): String {
+    return `${bx}_${by}_${bz}`
 }
 
 export class PerlinNoise {
-    seed: number
-    permutationTable: Uint8Array
+    seed = null
     constructor(seed) {
-        this.seed = seed;
-        this.permutationTable = new Uint8Array(512);
-        this.generatePermutationTable();
+        this.seed = seed
     }
 
-    generatePermutationTable() {
-        const p = new Uint8Array(256);
-        for (let i = 0; i < 256; i++) {
-            p[i] = Math.random() * 256;
+    getNoiseValue({ x, y, scale, distortion }) {
+        return 1;
+    }
+}
+
+export class Sine {
+    seed = null
+    constructor(seed) {
+        this.seed = seed
+    }
+
+    getNoiseValue({ x, y, scale = 1, iterations = 2 }) {
+        
+        let v = 0;
+
+        for (let i = 0; i < iterations; i++){
+            let iterationDivider = i + 1;
+            let a = (Math.sin(x * (scale * iterationDivider)) + 1) / 2;
+            let b = (Math.sin(y * (scale * iterationDivider)) + 1) / 2;
+
+            v += (a * b);
         }
-        for (let i = 0; i < 512; i++) {
-            this.permutationTable[i] = p[i & 255];
-        }
+
+        return v / iterations;
     }
+}
 
-    fade(t) {
-        return t * t * t * (t * (t * 6 - 15) + 10);
-    }
-
-    lerp(t, a, b) {
-        return a + t * (b - a);
-    }
-
-    grad(hash, x, y, z) {
-        const h = hash & 15;
-        const u = h < 8 ? x : y;
-        const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
-        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-    }
-
-    noise(x, y, z) {
-        const X = Math.floor(x) & 255;
-        const Y = Math.floor(y) & 255;
-        const Z = Math.floor(z) & 255;
-
-        x -= Math.floor(x);
-        y -= Math.floor(y);
-        z -= Math.floor(z);
-
-        const u = this.fade(x);
-        const v = this.fade(y);
-        const w = this.fade(z);
-
-        const A = this.permutationTable[X] + Y;
-        const AA = this.permutationTable[A] + Z;
-        const AB = this.permutationTable[A + 1] + Z;
-        const B = this.permutationTable[X + 1] + Y;
-        const BA = this.permutationTable[B] + Z;
-        const BB = this.permutationTable[B + 1] + Z;
-
-        return this.lerp(w, this.lerp(v, this.lerp(u, this.grad(this.permutationTable[AA], x, y, z), this.grad(this.permutationTable[BA], x - 1, y, z)), this.lerp(u, this.grad(this.permutationTable[AB], x, y - 1, z), this.grad(this.permutationTable[BB], x - 1, y - 1, z))), this.lerp(v, this.lerp(u, this.grad(this.permutationTable[AA + 1], x, y, z - 1), this.grad(this.permutationTable[BA + 1], x - 1, y, z - 1)), this.lerp(u, this.grad(this.permutationTable[AB + 1], x, y - 1, z - 1), this.grad(this.permutationTable[BB + 1], x - 1, y - 1, z - 1))));
-    }
-
-    getPerlinValue(x, y, scale, distortion) {
-        return (this.noise(this.seed + x * scale, this.seed + y * scale, distortion) + 1) / 2;
-    }
+export function getRandomHexColor() {
+    return Math.floor(Math.random() * 16777215)
 }

@@ -1,7 +1,7 @@
 
 export const state: IAppState = {
     seed: 123,
-    chunkSize: 8,
+    chunkSize: 16,
     drawChunks: 1,
     camera: null,
     scene: null,
@@ -9,5 +9,7 @@ export const state: IAppState = {
     controls: null,
     map: null,
     perlin: null,
-    seeded: null
+    seeded: null,
+    chunks: {},
+    blocks: {}
 }
