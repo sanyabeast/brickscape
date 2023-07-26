@@ -1,21 +1,30 @@
 {
     "compilerOptions": {
-        "target": "es5",
-        "module": "commonjs",
-        "outDir": "./dist",
-        "rootDir": "./src",
-        "strict": false,
-        "moduleResolution": "node",
+        "module": "es6",
+        "target": "es2015",
+        "sourceMap": true,
+        "declaration": true,
         "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "allowJs": true,
-        "isolatedModules": true
+        "declarationDir": "./dist/typing",
+        "noImplicitOverride": true,
+        "noImplicitThis": true,
+        "noImplicitReturns": true,
+        "allowUnreachableCode": false,
+        "lib": [
+            "webworker",
+            "es6",
+            "es5",
+            "dom"
+        ],
+        "types": [
+            "node"
+        ],
+        "paths": {}
     },
-    "include": [
-        "src/**/*.ts"
-    ],
     "exclude": [
         "node_modules"
+    ],
+    "include": [
+        "src/**/*"
     ]
 }

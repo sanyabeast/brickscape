@@ -1,5 +1,5 @@
 import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight } from "three";
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 
 const textureLoader = new TextureLoader();
 const rgbeLoader = new RGBELoader()

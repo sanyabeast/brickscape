@@ -63,19 +63,22 @@ export class VoxelMap extends Group {
         }
 
         for (let k in this.chunks) {
-            this.chunks[k].visible = this.chunks[k].active
+            if (this.chunks[k].active){
+                this.add(this.chunks[k])
+            } else {
+                this.remove(this.chunks[k])
+            }
         }
     }
 
-    _updateChunk(cx, cz) {
+    _updateChunk(cx: number, cz: number): Chunk {
         let chunkId = getChunkId(cx, cz)
         let chunk = this.chunks[chunkId]
 
         if (chunk === undefined) {
             chunk = this.chunks[chunkId] = new Chunk({
                 cx,
-                cz,
-                map: this
+                cz
             })
 
             this.add(chunk)

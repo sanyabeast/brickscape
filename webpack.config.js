@@ -2,7 +2,7 @@ const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-    entry: './src/index.js',
+    entry: './src/index.ts',
     mode: process.env.NODE_ENV === "production" ? "production" : "development",
     devtool: "source-map",
     output: {
