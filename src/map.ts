@@ -67,17 +67,14 @@ export class VoxelMap extends Group {
                 this.add(state.chunks[k])
             } else {
                 this.remove(state.chunks[k])
-                state.tasker.flush([
-                    'chunk',
-                    state.chunks[k].chunkId
-                ])
+                state.chunks[k].snooze()
+
             }
         }
     }
 
     _trimOldChunks(leftCount: number = 128) {
         let sortedChunks = orderBy(values(state.chunks), (chunk) => chunk.serial, 'desc')
-        sortedChunks.forEach(c => console.log(c.serial))
 
         let chunksToRemove = sortedChunks.slice(leftCount);
         chunksToRemove.forEach((chunk) => {

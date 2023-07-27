@@ -27,9 +27,9 @@ interface IVoxelWorldState {
 
 export const state: IVoxelWorldState = {
     seed: 123,
-    chunkSize: 8,
-    drawChunks: 3,
-    worldHeight: 8,
+    chunkSize: 15,
+    drawChunks: 2,
+    worldHeight: 16,
     camera: null,
     scene: null,
     renderer: null,

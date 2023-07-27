@@ -15,10 +15,12 @@ export class VoxelBlockMaterial extends ShaderMaterial {
       vertexShader: `
               varying vec3 vUv;
               varying vec3 vNormal;
+              varying vec3 vPosition;
           
               void main() {
                 vUv = position;  // Transfer position to varying
                 vNormal = normalize(normalMatrix * normal);
+                vPosition = position.xyz;
 
                 vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position,1.0);
                 gl_Position = projectionMatrix * mvPosition;

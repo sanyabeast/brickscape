@@ -1,20 +1,23 @@
+import { findIndex, indexOf } from "lodash"
 import { logd } from "./utils"
 
 
-type TaskFunction = (done: () => void) => void
+export type TaskFunction = (done: () => void) => void
 
-class Task {
+export class Task {
     _tags: String[] = null
     _runner: TaskFunction
     _canceled: boolean = false
+    _completed: boolean = false
     constructor({ tags, runner }) {
         this._tags = tags || []
         this._runner = runner
     }
     async run(done: () => void) {
-        if (this._canceled) {
+        if (this._canceled || this._completed) {
             done()
         } else {
+            this._completed = true;
             this._runner(done)
         }
     }
@@ -64,6 +67,7 @@ export class Tasker {
                 let index = Math.floor(Math.random() * this._randomQueue.length);
                 task = this._randomQueue[index]
                 this._randomQueue.splice(index, 1)
+                console.log(this._randomQueue.length)
             }
 
             if (task !== undefined) {
@@ -75,24 +79,27 @@ export class Tasker {
             console.log('tasker is locked')
         }
     }
-    add(runner: TaskFunction, tags: String[], type: QueueType = QueueType.Normal): Task {
+    add(runner: TaskFunction, tags: String[], type: QueueType = QueueType.Normal, replaceMatch: boolean = true): Task {
         let task = new Task({
             tags,
             runner
         })
+        let targetQueue = this._normalQueue;
         switch (type) {
-            case QueueType.Normal: {
-                this._normalQueue.unshift(task)
-                break;
-            }
             case QueueType.Reversed: {
-                this._reversedQueue.unshift(task)
-                break;
+                targetQueue = this._reversedQueue;
             }
             case QueueType.Random: {
-                this._randomQueue.unshift(task)
-                break;
+                targetQueue = this._randomQueue;
             }
+        }
+
+        let index = replaceMatch ? findIndex(targetQueue, (el) => el.match(tags)) : -1
+        if (index >= 0) {
+            console.log(`replace normal q task: ${index}`)
+            targetQueue[index] = task
+        } else {
+            targetQueue.unshift(task)
         }
         return task
     }
@@ -103,38 +110,36 @@ export class Tasker {
         this._running = false;
     }
     flush(tags?: String[]) {
-        setTimeout(() => {
-            tags = tags || []
-            let cleanedNormalQueue = []
-            let cleanedReversedQueue = []
-            let cleanRandomQueue = []
+        tags = tags || []
+        let cleanedNormalQueue = []
+        let cleanedReversedQueue = []
+        let cleanRandomQueue = []
 
-            this._normalQueue.forEach((task) => {
-                if (!task.match(tags)) {
-                    cleanedNormalQueue.push(task)
-                }
-            })
-
-            this._reversedQueue.forEach((task) => {
-                if (!task.match(tags)) {
-                    cleanedReversedQueue.push(task)
-                }
-            })
-
-            this._randomQueue.forEach((task) => {
-                if (!task.match(tags)) {
-                    cleanRandomQueue.push(task)
-                }
-            })
-
-            this._normalQueue = cleanedNormalQueue
-            this._reversedQueue = cleanedReversedQueue
-            this._randomQueue = cleanRandomQueue
-
-            logd('Tasker.flush', `tasks removed from queue: normal - ${this._normalQueue.length - cleanedNormalQueue.length}; reversed - ${this._reversedQueue.length - cleanedReversedQueue.length}; random - ${this._randomQueue.length - cleanRandomQueue.length}`)
-
-            this._locked = false
+        this._normalQueue.forEach((task) => {
+            if (!task.match(tags)) {
+                cleanedNormalQueue.push(task)
+            }
         })
+
+        this._reversedQueue.forEach((task) => {
+            if (!task.match(tags)) {
+                cleanedReversedQueue.push(task)
+            }
+        })
+
+        this._randomQueue.forEach((task) => {
+            if (!task.match(tags)) {
+                cleanRandomQueue.push(task)
+            }
+        })
+
+        this._normalQueue = cleanedNormalQueue
+        this._reversedQueue = cleanedReversedQueue
+        this._randomQueue = cleanRandomQueue
+
+        logd('Tasker.flush', `tasks removed from queue: normal - ${this._normalQueue.length - cleanedNormalQueue.length}; reversed - ${this._reversedQueue.length - cleanedReversedQueue.length}; random - ${this._randomQueue.length - cleanRandomQueue.length}`)
+
+        this._locked = false
     }
     _done(): void {
         this._locked = false;

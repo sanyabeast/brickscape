@@ -3,7 +3,7 @@ import { getBlockId, getChunkId, getRandomHexColor } from "./utils"
 import { state } from "./state"
 import { debounce, throttle } from "lodash"
 import { VoxelBlockMaterial } from "./shaders"
-import { QueueType } from "./tasker"
+import { QueueType, Task } from "./tasker"
 
 const blockGeometry = new BoxGeometry(1, 1, 1);
 const blockDummyMaterial = new MeshLambertMaterial();
@@ -47,7 +47,8 @@ export class Chunk extends Group {
     active: boolean = false
     blocks: Block[] = null
     instanced: InstancedMesh[] = null
-    _buildingCompleted: boolean = false
+    _buildTask: Task = null
+    _built: boolean = false
 
     constructor({ cx, cz }) {
         super()
@@ -68,9 +69,10 @@ export class Chunk extends Group {
     }
 
     refresh() {
-        if (!this._buildingCompleted) {
-            state.tasker.add((done) => {
-                this._buildingCompleted = true
+        if (!this._built) {
+            this._buildTask = state.tasker.add((done) => {
+                this._built = true
+                this._buildTask = null
                 this._buildChunk()
 
                 this.refresh = debounce(this.refresh.bind(this), 32)
@@ -80,10 +82,10 @@ export class Chunk extends Group {
                 done()
             }, ['chunk', this.chunkId], QueueType.Random)
         }
+
     }
 
     updateChunkMatrix() {
-
         this.instanced.forEach((mesh: InstancedMesh) => {
             mesh.instanceMatrix.needsUpdate = true
         })
@@ -195,7 +197,17 @@ export class Chunk extends Group {
         return cx === this.cx && cz === this.cz
     }
 
-    kill() {
+    snooze() {
+        if (this._buildTask) {
+            this._buildTask.cancel()
+            this._buildTask = null
+        }
+    }
 
+    kill() {
+        if (this._buildTask) {
+            this._buildTask.cancel()
+            this._buildTask = null
+        }
     }
 }
