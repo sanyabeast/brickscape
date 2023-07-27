@@ -10,6 +10,7 @@
         "noImplicitThis": true,
         "noImplicitReturns": true,
         "allowUnreachableCode": false,
+        "moduleResolution": "node",
         "lib": [
             "webworker",
             "es6",

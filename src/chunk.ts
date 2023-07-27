@@ -80,7 +80,7 @@ export class Chunk extends Group {
                 this.updateChunkMatrix()
                 this.visible = true
                 done()
-            }, ['chunk', this.chunkId], QueueType.Random)
+            }, ['chunk', this.chunkId], QueueType.Reversed)
         }
 
     }
@@ -130,7 +130,7 @@ export class Chunk extends Group {
     }
 
     _generateInstancedMeshes() {
-        let material = new VoxelBlockMaterial({ color: 0xEEEEEE })
+        let material = new VoxelBlockMaterial({ color: 0xFFFFFF })
         const instancedMesh = new InstancedMesh(blockGeometry, material, this.blocks.length);
         this.blocks.forEach((block, index) => {
             instancedMesh.setMatrixAt(index, block.matrix);

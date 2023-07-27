@@ -1,5 +1,7 @@
 
 
+import { perlin3D } from '@leodeslf/perlin-noise';
+
 export function SeededRandom(seed) {
     const m = 0x80000000; // 2**31;
     const a = 1103515245;
@@ -21,18 +23,34 @@ export class Sine {
     }
 
     getNoiseValue({ x, y, scale = 1, iterations = 2 }) {
+        return this.getPerlin3DNoise({ x, y })
+    }
 
-        let v = 0;
+    getPerlin3DNoise({ x, y, iterations = 4 }) {
+        let val = 0;
+
+        for (let i = 0; i < iterations; i++) {
+            const stepScale = 10 * Math.pow(2, i);
+            const valueScale = 1 + Math.pow(2, i);
+            val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
+        }
+
+        val /= iterations
+
+        return val
+    }
+
+    getSineNoise({ x, y, scale = 1, iterations = 2 }) {
+        let val = 0;
 
         for (let i = 0; i < iterations; i++) {
             let iterationDivider = i + 1;
             let a = (Math.sin(x * (scale * iterationDivider)) + 1) / 2;
             let b = (Math.sin(y * (scale * iterationDivider)) + 1) / 2;
 
-            v += (a * b);
+            val += (a * b);
         }
-
-        return v / iterations;
+        return val / iterations;
     }
 }
 

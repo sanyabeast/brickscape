@@ -13,14 +13,17 @@ export class VoxelBlockMaterial extends ShaderMaterial {
       },
       // Vertex shader
       vertexShader: `
-              varying vec3 vUv;
+              varying vec2 vUv;
               varying vec3 vNormal;
               varying vec3 vPosition;
+              varying vec3 vWorldPosition;
           
               void main() {
-                vUv = position;  // Transfer position to varying
+                vUv = uv;  // Transfer position to varying
                 vNormal = normalize(normalMatrix * normal);
                 vPosition = position.xyz;
+                vec4 worldPosition = modelMatrix * instanceMatrix * vec4( position, 1.0 );
+                vWorldPosition = worldPosition.xyz;
 
                 vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position,1.0);
                 gl_Position = projectionMatrix * mvPosition;
@@ -34,20 +37,23 @@ export class VoxelBlockMaterial extends ShaderMaterial {
               uniform float uNear;
               
               varying vec3 vNormal;
+              varying vec3 vPosition;
+              varying vec3 vWorldPosition;
 
               void main() {
                 // Basic Lambertian shading
-                float brightness = max(dot(vNormal, uLightDirection), 0.0);
+                float brightness = clamp(max(dot(vNormal, uLightDirection), 0.0), 0.25, 1.);
                 vec3 litColor = brightness * uColor;
           
                 // Compute depth
                 float depth = gl_FragCoord.z;
                 float linearDepth = (2.0 * uNear) / (uFar + uNear - depth * (uFar - uNear));
           
+                float height = vWorldPosition.y;
+                float heightFactor = clamp((height / 8.),0.25, 1.);
+
                 // Use linear depth to fade objects in the distance
-                float fadeFactor = 1.0 + linearDepth;
-          
-                gl_FragColor = vec4(litColor * fadeFactor, 1.0);
+                gl_FragColor = vec4(litColor * heightFactor, 1.0);
               }
             `,
     })

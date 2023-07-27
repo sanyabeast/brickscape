@@ -3,6 +3,7 @@ import { getChunkId, getNearestMultiple, logd } from "./utils";
 import { state } from "./state"
 import { Chunk } from "./chunk";
 import { debounce, orderBy, sortBy, throttle, values } from "lodash";
+import { QueueType } from "./tasker";
 
 
 export function getCameraLookIntersection(camera) {
@@ -28,7 +29,7 @@ export class VoxelMap extends Group {
         this.activeChunk = [null, null]
         // GRID HELPER
         this.add(new GridHelper(5, 10, 0x888888, 0x444444))
-        this._updateChunks = throttle(this._updateChunks.bind(this), 250)
+        this._updateChunks = debounce(this._updateChunks.bind(this), 250)
         this._trimOldChunks = debounce(this._trimOldChunks.bind(this), 500)
     }
     update() {
@@ -43,7 +44,7 @@ export class VoxelMap extends Group {
             this.activeChunk[1] = cz
             logd('VoxelMap.update', 'active chunk changed', this.activeChunk)
             this._updateChunks();
-            this._trimOldChunks()
+            this._trimOldChunks(state.maxChunksInMemory)
         }
     }
 
@@ -64,11 +65,14 @@ export class VoxelMap extends Group {
 
         for (let k in state.chunks) {
             if (state.chunks[k].active) {
+                state.tasker.flush(['map', 'chunk-snooze', state.chunks[k].chunkId])
                 this.add(state.chunks[k])
             } else {
-                this.remove(state.chunks[k])
                 state.chunks[k].snooze()
-
+                state.tasker.add((done) => {
+                    this.remove(state.chunks[k])
+                    done()
+                }, ['map', 'chunk-snooze', state.chunks[k].chunkId], QueueType.Normal, true)
             }
         }
     }

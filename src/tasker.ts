@@ -57,21 +57,25 @@ export class Tasker {
     }
     tick() {
         if (this._locked === false) {
-            let task = this._normalQueue.pop()
+            let task = undefined
+
+            if (task === undefined) {
+                let index = Math.floor(Math.random() * this._randomQueue.length);
+                task = this._randomQueue[index]
+                this._randomQueue.splice(index, 1)
+            }
 
             if (task === undefined) {
                 task = this._reversedQueue.shift()
             }
 
             if (task === undefined) {
-                let index = Math.floor(Math.random() * this._randomQueue.length);
-                task = this._randomQueue[index]
-                this._randomQueue.splice(index, 1)
-                console.log(this._randomQueue.length)
+                task = this._normalQueue.pop()
             }
 
+
             if (task !== undefined) {
-                console.log('task found')
+                // console.log('task found')
                 this._locked = true
                 task.run(this._done)
             }
@@ -88,9 +92,11 @@ export class Tasker {
         switch (type) {
             case QueueType.Reversed: {
                 targetQueue = this._reversedQueue;
+                break
             }
             case QueueType.Random: {
                 targetQueue = this._randomQueue;
+                break
             }
         }
 

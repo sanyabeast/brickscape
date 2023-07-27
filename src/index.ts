@@ -14,7 +14,7 @@ function main() {
     state.tasker = new Tasker({ rate: 60 })
 
     const pixelRatio = window.devicePixelRatio
-    const fov = 90;
+    const fov = 110;
     const near = 0.1;
     const far = 256;
     let aspect = 2;  // the canvas default
@@ -39,9 +39,10 @@ function main() {
     controls.screenSpacePanning = false;
     controls.minDistance = 15;
     controls.maxDistance = 100;
-    controls.maxPolarAngle = (Math.PI / 3);
+    controls.maxPolarAngle = (Math.PI / 2.5);
     controls.enableDamping = true
-    controls.dampingFactor = 0.025
+    controls.dampingFactor = 0.01
+    controls.panSpeed = 0.75
 
     // MAP
     const map = state.map = new VoxelMap({

@@ -12,6 +12,7 @@ interface IVoxelWorldState {
     chunks: {
         [x: string]: Chunk
     }
+    maxChunksInMemory: number
     seed: number,
     chunkSize: number,
     drawChunks: number
@@ -26,9 +27,10 @@ interface IVoxelWorldState {
 }
 
 export const state: IVoxelWorldState = {
+    maxChunksInMemory: 512,
     seed: 123,
-    chunkSize: 15,
-    drawChunks: 2,
+    chunkSize: 8,
+    drawChunks: 4,
     worldHeight: 16,
     camera: null,
     scene: null,
