@@ -11,10 +11,10 @@ import { Tasker } from './tasker';
 function main() {
 
     state.generator = new VoxelWorldGenerator(state.seed)
-    state.tasker = new Tasker({ rate: 15 })
+    state.tasker = new Tasker({ rate: 60 })
 
     const pixelRatio = window.devicePixelRatio
-    const fov = 75;
+    const fov = 90;
     const near = 0.1;
     const far = 256;
     let aspect = 2;  // the canvas default
@@ -40,6 +40,8 @@ function main() {
     controls.minDistance = 15;
     controls.maxDistance = 100;
     controls.maxPolarAngle = (Math.PI / 3);
+    controls.enableDamping = true
+    controls.dampingFactor = 0.025
 
     // MAP
     const map = state.map = new VoxelMap({

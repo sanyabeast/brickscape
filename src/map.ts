@@ -2,7 +2,8 @@ import { Group, GridHelper, Vector2, Vector3, Raycaster, Plane } from "three";
 import { getChunkId, getNearestMultiple, logd } from "./utils";
 import { state } from "./state"
 import { Chunk } from "./chunk";
-import { debounce, throttle } from "lodash";
+import { debounce, orderBy, sortBy, throttle, values } from "lodash";
+
 
 export function getCameraLookIntersection(camera) {
     // Create a Raycaster using the camera's current position and look direction
@@ -20,9 +21,6 @@ export class VoxelMap extends Group {
     camera = null
     activeChunk = null
 
-    get chunks() {
-        return state.chunks
-    }
 
     constructor({ camera }) {
         super();
@@ -30,7 +28,8 @@ export class VoxelMap extends Group {
         this.activeChunk = [null, null]
         // GRID HELPER
         this.add(new GridHelper(5, 10, 0x888888, 0x444444))
-        this._updateChunks = throttle(this._updateChunks.bind(this), 100)
+        this._updateChunks = throttle(this._updateChunks.bind(this), 250)
+        this._trimOldChunks = debounce(this._trimOldChunks.bind(this), 500)
     }
     update() {
         let cameraLook = getCameraLookIntersection(this.camera)
@@ -44,6 +43,7 @@ export class VoxelMap extends Group {
             this.activeChunk[1] = cz
             logd('VoxelMap.update', 'active chunk changed', this.activeChunk)
             this._updateChunks();
+            this._trimOldChunks()
         }
     }
 
@@ -51,8 +51,8 @@ export class VoxelMap extends Group {
         let cx = this.activeChunk[0]
         let cz = this.activeChunk[1]
 
-        for (let k in this.chunks) {
-            this.chunks[k].active = false
+        for (let k in state.chunks) {
+            state.chunks[k].active = false
         }
 
         for (let y = cz - state.drawChunks; y <= cz + state.drawChunks; y++) {
@@ -62,26 +62,45 @@ export class VoxelMap extends Group {
             }
         }
 
-        for (let k in this.chunks) {
-            if (this.chunks[k].active) {
-                this.add(this.chunks[k])
+        for (let k in state.chunks) {
+            if (state.chunks[k].active) {
+                this.add(state.chunks[k])
             } else {
-                this.remove(this.chunks[k])
+                this.remove(state.chunks[k])
+                state.tasker.flush([
+                    'chunk',
+                    state.chunks[k].chunkId
+                ])
             }
+        }
+    }
+
+    _trimOldChunks(leftCount: number = 128) {
+        let sortedChunks = orderBy(values(state.chunks), (chunk) => chunk.serial, 'desc')
+        sortedChunks.forEach(c => console.log(c.serial))
+
+        let chunksToRemove = sortedChunks.slice(leftCount);
+        chunksToRemove.forEach((chunk) => {
+            state.tasker.flush(['chunk', chunk.chunkId])
+            delete state.chunks[chunk.chunkId]
+            this.remove(chunk)
+            chunk.kill()
+        })
+
+        if (chunksToRemove.length > 0) {
+            console.log(`chunks removed: ${chunksToRemove.length}`)
         }
     }
 
     _updateChunk(cx: number, cz: number): Chunk {
         let chunkId = getChunkId(cx, cz)
-        let chunk = this.chunks[chunkId]
+        let chunk = state.chunks[chunkId]
 
         if (chunk === undefined) {
-            chunk = this.chunks[chunkId] = new Chunk({
+            chunk = state.chunks[chunkId] = new Chunk({
                 cx,
                 cz
             })
-
-            this.add(chunk)
         } else {
             chunk.refresh()
         }

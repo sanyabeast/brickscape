@@ -3,9 +3,11 @@ import { getBlockId, getChunkId, getRandomHexColor } from "./utils"
 import { state } from "./state"
 import { debounce, throttle } from "lodash"
 import { VoxelBlockMaterial } from "./shaders"
+import { QueueType } from "./tasker"
 
 const blockGeometry = new BoxGeometry(1, 1, 1);
 const blockDummyMaterial = new MeshLambertMaterial();
+let _chunksCounter = 0;
 
 export class Block extends Mesh {
     blockX: number = null
@@ -36,21 +38,24 @@ export class Block extends Mesh {
     }
 }
 
+
 export class Chunk extends Group {
     chunkId: string = null
     cx: number = null
     cz: number = null
-    createdAt: number = null
+    serial: number = null
     active: boolean = false
     blocks: Block[] = null
     instanced: InstancedMesh[] = null
+    _buildingCompleted: boolean = false
 
     constructor({ cx, cz }) {
         super()
         this.cx = cx
         this.cz = cz
         this.chunkId = getChunkId(cx, cz)
-        this.createdAt = +new Date()
+        this.serial = _chunksCounter
+        _chunksCounter++
         this.blocks = []
         this.instanced = []
 
@@ -58,20 +63,23 @@ export class Chunk extends Group {
         this.matrixAutoUpdate = false
 
         this.visible = false
-        state.tasker.add((done) => {
-            this._buildChunk()
-
-            this.refresh = debounce(this.refresh.bind(this), 32)
-            this.updateChunkMatrix = throttle(this.updateChunkMatrix.bind(this), 1000 / 15)
-            this.updateChunkMatrix()
-            this.visible = true
-            done()
-        })
+        this.refresh()
 
     }
 
     refresh() {
+        if (!this._buildingCompleted) {
+            state.tasker.add((done) => {
+                this._buildingCompleted = true
+                this._buildChunk()
 
+                this.refresh = debounce(this.refresh.bind(this), 32)
+                this.updateChunkMatrix = throttle(this.updateChunkMatrix.bind(this), 1000 / 15)
+                this.updateChunkMatrix()
+                this.visible = true
+                done()
+            }, ['chunk', this.chunkId], QueueType.Random)
+        }
     }
 
     updateChunkMatrix() {
@@ -185,5 +193,9 @@ export class Chunk extends Group {
     }
     isSameChunk(cx, cz) {
         return cx === this.cx && cz === this.cz
+    }
+
+    kill() {
+
     }
 }

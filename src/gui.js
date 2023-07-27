@@ -9,6 +9,6 @@ export function createGui({ scene, camera, renderer }) {
 
     pane.addInput(camera, 'fov', {
         min: 15,
-        max: 90,
+        max: 120,
     }).on('change', e => updateProjectionMatrix());
 }
