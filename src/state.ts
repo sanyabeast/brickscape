@@ -30,7 +30,7 @@ export const state: IVoxelWorldState = {
     maxChunksInMemory: 512,
     seed: 123,
     chunkSize: 8,
-    drawChunks: 4,
+    drawChunks: 2,
     worldHeight: 16,
     camera: null,
     scene: null,
@@ -43,3 +43,5 @@ export const state: IVoxelWorldState = {
     generator: null,
     tasker: null
 }
+
+export const maxBlocksInChunk = state.chunkSize * state.chunkSize * state.worldHeight;

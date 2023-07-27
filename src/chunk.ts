@@ -1,25 +1,24 @@
-import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh } from "three"
+import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh, Object3D, InstancedBufferGeometry, InstancedBufferAttribute } from "three"
 import { getBlockId, getChunkId, getRandomHexColor } from "./utils"
-import { state } from "./state"
+import { maxBlocksInChunk, state } from "./state"
 import { debounce, throttle } from "lodash"
 import { VoxelBlockMaterial } from "./shaders"
 import { QueueType, Task } from "./tasker"
 
-const blockGeometry = new BoxGeometry(1, 1, 1);
-const blockDummyMaterial = new MeshLambertMaterial();
+
+
+
 let _chunksCounter = 0;
 
-export class Block extends Mesh {
+export class Block extends Object3D {
     blockX: number = null
     blockY: number = null
     blockZ: number = null
     blockId: string = null
-    override material: VoxelBlockMaterial
+    instanceIndex: number = null
     constructor({ chunk, x, y, z }) {
-        const geometry = blockGeometry;
         // const material = new MeshBasicMaterial({ color: getRandomHexColor() });
-        const material = blockDummyMaterial
-        super(geometry, material);
+        super();
 
         this.blockX = x + chunk.cx;
         this.blockY = y;
@@ -33,7 +32,6 @@ export class Block extends Mesh {
     }
 
     kill() {
-        this.geometry.dispose()
         delete state.blocks[this.blockId]
     }
 }
@@ -49,6 +47,10 @@ export class Chunk extends Group {
     instanced: InstancedMesh[] = null
     _buildTask: Task = null
     _built: boolean = false
+    _instancedBlockGeometry: InstancedBufferGeometry = null
+    _instancedAttribute: InstancedBufferAttribute = null
+    _instancedMesh: InstancedMesh = null
+    _noiseTable: { [x: string]: number }
 
     constructor({ cx, cz }) {
         super()
@@ -58,14 +60,33 @@ export class Chunk extends Group {
         this.serial = _chunksCounter
         _chunksCounter++
         this.blocks = []
-        this.instanced = []
+
+        this._noiseTable = {}
 
         this.position.set(cx * state.chunkSize, 0, cz * state.chunkSize)
         this.matrixAutoUpdate = false
 
         this.visible = false
+
+        this.updateChunkMatrix = throttle(this.updateChunkMatrix.bind(this), 1000 / 15)
+        this.refresh = debounce(this.refresh.bind(this), 32)
+
         this.refresh()
 
+
+    }
+
+    _initBlockGeometry() {
+        if (this._instancedBlockGeometry === null) {
+            const instancedBlockGeometry = this._instancedBlockGeometry = new InstancedBufferGeometry().copy(new BoxGeometry(1, 1, 1) as any);
+            let instanceIndices = new Float32Array(maxBlocksInChunk * 4)
+
+            let attribute = this._instancedAttribute = new InstancedBufferAttribute(instanceIndices, 4);
+            for (let i = 0; i < maxBlocksInChunk; i++) {
+                attribute.setXYZW(i, 0, 0, 1, i);
+            }
+            instancedBlockGeometry.setAttribute('instanceIndex', attribute);
+        }
     }
 
     refresh() {
@@ -73,22 +94,29 @@ export class Chunk extends Group {
             this._buildTask = state.tasker.add((done) => {
                 this._built = true
                 this._buildTask = null
+
+                this._initBlockGeometry()
                 this._buildChunk()
 
-                this.refresh = debounce(this.refresh.bind(this), 32)
-                this.updateChunkMatrix = throttle(this.updateChunkMatrix.bind(this), 1000 / 15)
                 this.updateChunkMatrix()
+                this._updateBlocksMaterials()
                 this.visible = true
                 done()
             }, ['chunk', this.chunkId], QueueType.Reversed)
+        } else {
+            this._updateBlocksMaterials()
         }
 
     }
 
+    updateBlocksMaterials() {
+        if (this._built) {
+            this._updateBlocksMaterials()
+        }
+    }
+
     updateChunkMatrix() {
-        this.instanced.forEach((mesh: InstancedMesh) => {
-            mesh.instanceMatrix.needsUpdate = true
-        })
+        this._instancedMesh.instanceMatrix.needsUpdate = true
         this.updateMatrix()
     }
 
@@ -118,45 +146,59 @@ export class Chunk extends Group {
                     }
                 }
 
-                setTimeout(() => {
-                    this._generateInstancedMeshes()
-                })
+                this._generateInstancedMeshes()
             }
         }
 
-        setTimeout(() => {
-            this._updateBlocksMaterials()
-        })
+
     }
 
     _generateInstancedMeshes() {
         let material = new VoxelBlockMaterial({ color: 0xFFFFFF })
-        const instancedMesh = new InstancedMesh(blockGeometry, material, this.blocks.length);
+        const instancedMesh = this._instancedMesh = new InstancedMesh(this._instancedBlockGeometry, material, this.blocks.length);
         this.blocks.forEach((block, index) => {
+            block.instanceIndex = index
             instancedMesh.setMatrixAt(index, block.matrix);
         })
+
         this.add(instancedMesh)
-        this.instanced.push(instancedMesh)
     }
 
     _updateBlocksMaterials() {
-        for (let k in state.blocks) {
-            let block = state.blocks[k]
-            // let siblings = this.getSiblings(block.blockX, block.blockY, block.blockZ)
 
-            // let darkness = siblings.length / this.getMaxSiblingsCount()
-            // // console.log(darkness)
-            // let bright = (1 - darkness)
-            // block.material.color.setRGB(bright, bright, bright)
+        state.tasker.add((done) => {
+            this.blocks.forEach((block, index) => {
+                let siblings = this.getShadingSiblings(block.blockX, block.blockY, block.blockZ)
+                // console.log(siblings)
 
-            let blockElevation = block.blockY
-            let darkness = (blockElevation + 1) / state.worldHeight
-            block.material.color.setRGB(darkness, darkness, darkness)
-        }
+                let brightness = 1 - (siblings.length / 9)
+                brightness = state.blocks[getBlockId(block.blockX, block.blockY + 1, block.blockZ)] ? 1 : 0
+
+                this._instancedAttribute.setXYZW(block.instanceIndex, 0, 0, brightness, block.instanceIndex)
+            })
+
+            this._instancedAttribute.needsUpdate = true
+            done()
+        }, ['chunk', this.chunkId, 'update-materials'], QueueType.Random)
     }
 
     getMaxSiblingsCount() {
         return 6
+    }
+
+    getShadingSiblings(bx, by, bz) {
+        let siblings = []
+
+        for (let x = -1; x < 1; x++) {
+            for (let z = -1; z < 1; z++) {
+                if (state.blocks[getBlockId(bx + x, by + 1, bz + z)]) {
+                    siblings.push(state.blocks[getBlockId(bx + x, by + 1, bz + z)])
+                }
+
+            }
+        }
+
+        return siblings
     }
 
     getSiblings(bx, by, bz) {
@@ -209,5 +251,6 @@ export class Chunk extends Group {
             this._buildTask.cancel()
             this._buildTask = null
         }
+        this._instancedBlockGeometry.dispose()
     }
 }

@@ -1,6 +1,7 @@
 
 
 import { perlin3D } from '@leodeslf/perlin-noise';
+import { clamp } from 'lodash';
 
 export function SeededRandom(seed) {
     const m = 0x80000000; // 2**31;
@@ -37,7 +38,7 @@ export class Sine {
 
         val /= iterations
 
-        return val
+        return clamp(val, 0, 1)
     }
 
     getSineNoise({ x, y, scale = 1, iterations = 2 }) {
@@ -50,7 +51,7 @@ export class Sine {
 
             val += (a * b);
         }
-        return val / iterations;
+        return clamp(val / iterations, 0, 1);
     }
 }
 

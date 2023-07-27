@@ -75,6 +75,16 @@ export class VoxelMap extends Group {
                 }, ['map', 'chunk-snooze', state.chunks[k].chunkId], QueueType.Normal, true)
             }
         }
+
+        for (let k in state.chunks) {
+            state.tasker.add((done) => {
+                if (state.chunks[k]) {
+                    state.chunks[k].updateBlocksMaterials()
+                    done()
+                }
+
+            }, ['map', 'chunk', k, 'update-materials'], QueueType.Normal, true)
+        }
     }
 
     _trimOldChunks(leftCount: number = 128) {
