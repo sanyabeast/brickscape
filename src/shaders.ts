@@ -1,5 +1,9 @@
-import { ShaderMaterial, Color, Vector3 } from "three";
+import { ShaderMaterial, Color, Vector3, TextureLoader, Vector2 } from "three";
 import { maxBlocksInChunk, state } from "./state";
+
+let _textureLoader =  new TextureLoader()
+let _tilemap = _textureLoader.load('assets/tiles.png')
+_tilemap.flipY = false
 
 export class VoxelBlockMaterial extends ShaderMaterial {
   constructor({ color }) {
@@ -10,17 +14,19 @@ export class VoxelBlockMaterial extends ShaderMaterial {
         uLightDirection: { value: new Vector3(0, 10, 2).normalize() },
         uFar: { value: state.camera.far }, // Far plane
         uNear: { value: state.camera.near }, // Near plane
-        uMaxInstances: {value: maxBlocksInChunk}
+        uMaxInstances: {value: maxBlocksInChunk},
+        uTiles: {value: _tilemap},
+        uTileSize: {value: 1/16}
       },
       // Vertex shader
       vertexShader: `
-              attribute vec4 instanceIndex;
+              attribute vec3 instanceData;
 
               varying vec2 vUv;
               varying vec3 vNormal;
               varying vec3 vPosition;
               varying vec3 vWorldPosition;
-              varying vec4 vInstanceIndex;
+              varying vec3 vInstanceData;
 
               void main() {
                 vUv = uv;  // Transfer position to varying
@@ -28,7 +34,7 @@ export class VoxelBlockMaterial extends ShaderMaterial {
                 vPosition = position.xyz;
                 vec4 worldPosition = modelMatrix * instanceMatrix * vec4( position, 1.0 );
                 vWorldPosition = worldPosition.xyz;
-                vInstanceIndex = instanceIndex;
+                vInstanceData = instanceData;
 
                 vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position,1.0);
                 gl_Position = projectionMatrix * mvPosition;
@@ -41,11 +47,14 @@ export class VoxelBlockMaterial extends ShaderMaterial {
               uniform float uFar;
               uniform float uNear;
               uniform float uMaxInstances;
+              uniform sampler2D uTiles;
+              uniform float uTileSize;
               
+              varying vec2 vUv;
               varying vec3 vNormal;
               varying vec3 vPosition;
               varying vec3 vWorldPosition;
-              varying vec4 vInstanceIndex;
+              varying vec3 vInstanceData;
 
               void main() {
                 // Basic Lambertian shading
@@ -59,8 +68,11 @@ export class VoxelBlockMaterial extends ShaderMaterial {
                 float height = vWorldPosition.y;
                 float heightFactor = clamp((height / 8.),0.25, 1.);
 
+                vec2 tileUV = vec2(vInstanceData.x * uTileSize + (vUv.x * uTileSize), vInstanceData.y * uTileSize + (vUv.y * uTileSize));
+                vec4 tileColor = texture2D(uTiles, tileUV);
+
                 // Use linear depth to fade objects in the distance
-                gl_FragColor = vec4(litColor* (vInstanceIndex.z), 1.0);
+                gl_FragColor = vec4(tileColor.xyz * litColor * (vInstanceData.z), 1.);
               }
             `,
     })

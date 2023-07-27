@@ -11,10 +11,10 @@ import { Tasker } from './tasker';
 function main() {
 
     state.generator = new VoxelWorldGenerator(state.seed)
-    state.tasker = new Tasker({ rate: 60 })
+    state.tasker = new Tasker({ rate: 30 })
 
     const pixelRatio = window.devicePixelRatio
-    const fov = 110;
+    const fov = 89;
     const near = 0.1;
     const far = 256;
     let aspect = 2;  // the canvas default

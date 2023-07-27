@@ -1,6 +1,6 @@
 
 
-import { perlin3D } from '@leodeslf/perlin-noise';
+import { perlin3D, perlin4D } from '@leodeslf/perlin-noise';
 import { clamp } from 'lodash';
 
 export function SeededRandom(seed) {
@@ -16,31 +16,12 @@ export function SeededRandom(seed) {
     };
 }
 
-
 export class Sine {
     seed = null
+
     constructor(seed) {
         this.seed = seed
     }
-
-    getNoiseValue({ x, y, scale = 1, iterations = 2 }) {
-        return this.getPerlin3DNoise({ x, y })
-    }
-
-    getPerlin3DNoise({ x, y, iterations = 4 }) {
-        let val = 0;
-
-        for (let i = 0; i < iterations; i++) {
-            const stepScale = 10 * Math.pow(2, i);
-            const valueScale = 1 + Math.pow(2, i);
-            val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
-        }
-
-        val /= iterations
-
-        return clamp(val, 0, 1)
-    }
-
     getSineNoise({ x, y, scale = 1, iterations = 2 }) {
         let val = 0;
 
@@ -59,8 +40,49 @@ export class Sine {
 export class VoxelWorldGenerator {
     seed = null
     sine: Sine = null
+    _seededRandom = null;;
     constructor(seed) {
         this.seed = seed
+        this._seededRandom = SeededRandom(seed)
         this.sine = new Sine(seed)
     }
+
+    random() {
+        return this._seededRandom()
+    }
+
+    getPerlin3DNoise({ x, y, iterations = 4 }) {
+        let val = 0;
+
+        for (let i = 0; i < iterations; i++) {
+            const stepScale = 10 * Math.pow(2, i);
+            const valueScale = 1 + Math.pow(2, i);
+            val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
+        }
+
+        val /= (iterations - 2)
+
+        return clamp(val, 0, 1)
+    }
+
+    getPerlin4DNoise({ x, y, z, iterations = 4 }) {
+        let val = 0;
+
+        for (let i = 0; i < iterations; i++) {
+            const stepScale = 10 * Math.pow(2, i);
+            const valueScale = 1 + Math.pow(2, i);
+            val = (val + Math.abs(perlin4D(x / stepScale, y / stepScale, z / stepScale, this.seed / stepScale) * valueScale)) / 2
+        }
+
+        val /= iterations
+
+        return clamp(val, 0, 1)
+    }
+
+
+    getNoiseValue({ x, y, scale = 1, iterations = 2 }) {
+        return this.getPerlin3DNoise({ x, y })
+    }
+
+
 }

@@ -42,7 +42,7 @@ export class VoxelMap extends Group {
         if (cx !== this.activeChunk[0] || cz != this.activeChunk[1]) {
             this.activeChunk[0] = cx
             this.activeChunk[1] = cz
-            logd('VoxelMap.update', 'active chunk changed', this.activeChunk)
+            // logd('VoxelMap.update', 'active chunk changed', this.activeChunk)
             this._updateChunks();
             this._trimOldChunks(state.maxChunksInMemory)
         }
@@ -65,21 +65,25 @@ export class VoxelMap extends Group {
 
         for (let k in state.chunks) {
             if (state.chunks[k].active) {
-                state.tasker.flush(['map', 'chunk-snooze', state.chunks[k].chunkId])
+                state.tasker.flush(['map', 'chunk-snooze', state.chunks[k].cid])
                 this.add(state.chunks[k])
             } else {
                 state.chunks[k].snooze()
                 state.tasker.add((done) => {
                     this.remove(state.chunks[k])
                     done()
-                }, ['map', 'chunk-snooze', state.chunks[k].chunkId], QueueType.Normal, true)
+                }, ['map', 'chunk-snooze', state.chunks[k].cid], QueueType.Normal, true)
             }
         }
 
+        this._updateBlocks()
+    }
+
+    _updateBlocks(){
         for (let k in state.chunks) {
             state.tasker.add((done) => {
                 if (state.chunks[k]) {
-                    state.chunks[k].updateBlocksMaterials()
+                    state.chunks[k].updateBlocks()
                     done()
                 }
 
@@ -92,8 +96,8 @@ export class VoxelMap extends Group {
 
         let chunksToRemove = sortedChunks.slice(leftCount);
         chunksToRemove.forEach((chunk) => {
-            state.tasker.flush(['chunk', chunk.chunkId])
-            delete state.chunks[chunk.chunkId]
+            state.tasker.flush(['chunk', chunk.cid])
+            delete state.chunks[chunk.cid]
             this.remove(chunk)
             chunk.kill()
         })

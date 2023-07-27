@@ -1,44 +1,94 @@
-import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh, Object3D, InstancedBufferGeometry, InstancedBufferAttribute } from "three"
-import { getBlockId, getChunkId, getRandomHexColor } from "./utils"
+import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh, Object3D, InstancedBufferGeometry, InstancedBufferAttribute, TextureLoader } from "three"
+import { getBlockId, getChunkId, getRandomHexColor, lerp } from "./utils"
 import { maxBlocksInChunk, state } from "./state"
 import { debounce, throttle } from "lodash"
 import { VoxelBlockMaterial } from "./shaders"
 import { QueueType, Task } from "./tasker"
 
 
-
-
 let _chunksCounter = 0;
 
+enum BlockType {
+    None,
+    Gravel,
+    Rock,
+    Dirt,
+    Sand
+}
+
+const blockTypes = {
+    [BlockType.None]: {
+        tile: [0, 0]
+    },
+    [BlockType.Gravel]: {
+        tile: [0, 0]
+    },
+    [BlockType.Rock]: {
+        tile: [0, 1]
+    },
+    [BlockType.Dirt]: {
+        tile: [2, 0]
+    },
+    [BlockType.Sand]: {
+        tile: [2, 1]
+    }
+}
+
+export type FSiblingIteratee = (sibling: Block, dx: number, dy: number, dz: number) => void
 export class Block extends Object3D {
-    blockX: number = null
-    blockY: number = null
-    blockZ: number = null
-    blockId: string = null
+    bx: number = null
+    by: number = null
+    bz: number = null
+    bid: string = null
+    btype: BlockType = BlockType.None
     instanceIndex: number = null
-    constructor({ chunk, x, y, z }) {
+    lightness: number = 1
+
+    get tileX(): number {
+        return blockTypes[this.btype].tile[0]
+    }
+
+    get tileY(): number {
+        return blockTypes[this.btype].tile[1]
+    }
+
+    constructor({ x, y, z, chunk }) {
         // const material = new MeshBasicMaterial({ color: getRandomHexColor() });
         super();
 
-        this.blockX = x + chunk.cx;
-        this.blockY = y;
-        this.blockZ = z + chunk.cz;
-        this.blockId = getBlockId(x + chunk.cx, y, z + chunk.cz);
+        this.bx = x;
+        this.by = y;
+        this.bz = z;
+        this.bid = getBlockId(x, y, z);
 
-        state.blocks[this.blockId] = this
+        state.blocks[this.bid] = this
 
-        this.position.set(x, y, z)
+        this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
         this.updateMatrix()
     }
 
     kill() {
-        delete state.blocks[this.blockId]
+        delete state.blocks[this.bid]
+    }
+
+    iterateSiblings(distance: number = 1, iteratee: FSiblingIteratee) {
+        distance = Math.round(distance)
+        for (let x = -distance; x <= distance; x++) {
+            for (let y = -distance; y <= distance; y++) {
+                for (let z = -distance; z <= distance; z++) {
+                    let blockId = getBlockId(x + this.bx, y + this.by, z + this.bz)
+                    let siblingBlock = state.blocks[blockId]
+                    if (siblingBlock) {
+                        iteratee(siblingBlock, x, y, z)
+                    }
+                }
+            }
+        }
     }
 }
 
-
 export class Chunk extends Group {
-    chunkId: string = null
+    cid: string = null
     cx: number = null
     cz: number = null
     serial: number = null
@@ -56,7 +106,7 @@ export class Chunk extends Group {
         super()
         this.cx = cx
         this.cz = cz
-        this.chunkId = getChunkId(cx, cz)
+        this.cid = getChunkId(cx, cz)
         this.serial = _chunksCounter
         _chunksCounter++
         this.blocks = []
@@ -72,20 +122,18 @@ export class Chunk extends Group {
         this.refresh = debounce(this.refresh.bind(this), 32)
 
         this.refresh()
-
-
     }
 
     _initBlockGeometry() {
         if (this._instancedBlockGeometry === null) {
             const instancedBlockGeometry = this._instancedBlockGeometry = new InstancedBufferGeometry().copy(new BoxGeometry(1, 1, 1) as any);
-            let instanceIndices = new Float32Array(maxBlocksInChunk * 4)
+            let instanceIndices = new Float32Array(maxBlocksInChunk * 3 * 10)
 
-            let attribute = this._instancedAttribute = new InstancedBufferAttribute(instanceIndices, 4);
+            let attribute = this._instancedAttribute = new InstancedBufferAttribute(instanceIndices, 3);
             for (let i = 0; i < maxBlocksInChunk; i++) {
-                attribute.setXYZW(i, 0, 0, 1, i);
+                attribute.setXYZ(i, 0, 0, 1);
             }
-            instancedBlockGeometry.setAttribute('instanceIndex', attribute);
+            instancedBlockGeometry.setAttribute('instanceData', attribute);
         }
     }
 
@@ -99,19 +147,27 @@ export class Chunk extends Group {
                 this._buildChunk()
 
                 this.updateChunkMatrix()
-                this._updateBlocksMaterials()
+                this.updateBlocks()
                 this.visible = true
                 done()
-            }, ['chunk', this.chunkId], QueueType.Reversed)
+            }, ['chunk', this.cid], QueueType.Reversed)
         } else {
-            this._updateBlocksMaterials()
+            this.updateBlocks()
         }
 
     }
 
-    updateBlocksMaterials() {
+    updateBlocks() {
+        // console.log(`updating blocks at ${this.toString()}...`)
         if (this._built) {
-            this._updateBlocksMaterials()
+            state.tasker.add((done) => {
+                this._updateBlocksShading()
+                this._updateInstancedAttributes()
+                done()
+            }, ['chunk', this.cid, 'update-blocks-shading'], QueueType.Reversed)
+
+            this._updateBlocksTypes();
+            this._updateInstancedAttributes()
         }
     }
 
@@ -121,9 +177,10 @@ export class Chunk extends Group {
     }
 
     _buildChunk() {
+        // console.log(`building blocks at ${this.toString()}...`)
         for (let z = 0; z < state.chunkSize; z++) {
             for (let x = 0; x < state.chunkSize; x++) {
-                let noiseValue = state.generator.sine.getNoiseValue({
+                let noiseValue = state.generator.getNoiseValue({
                     x: x + (this.cx * state.chunkSize),
                     y: z + (this.cz * state.chunkSize),
                     scale: 0.01,
@@ -134,15 +191,16 @@ export class Chunk extends Group {
 
                 for (let i = 0; i < heightValue; i++) {
                     let blockId = getBlockId(x + (this.cx * state.chunkSize), i, z + (this.cz * state.chunkSize))
-                    if (state[blockId] === undefined) {
+                    if (state.blocks[blockId] === undefined) {
                         this.blocks.push(new Block({
                             chunk: this,
-                            x: x,
+                            x: x + (this.cx * state.chunkSize),
                             y: i,
-                            z: z
+                            z: z + (this.cz * state.chunkSize)
                         }))
                     } else {
-                        console.log(state[blockId])
+
+                        console.log(state.blocks[blockId])
                     }
                 }
 
@@ -164,72 +222,56 @@ export class Chunk extends Group {
         this.add(instancedMesh)
     }
 
-    _updateBlocksMaterials() {
+    _updateBlocksTypes() {
+        this.blocks.forEach((block, index) => {
+            if (block.btype === BlockType.None) {
+                let sibDistance = 1
+                let noiseValue = state.generator.getPerlin3DNoise({
+                    x: block.bx + (this.cx * state.chunkSize),
+                    y: block.by + (this.cz * state.chunkSize),
+                    iterations: 4
+                })
 
-        state.tasker.add((done) => {
-            this.blocks.forEach((block, index) => {
-                let siblings = this.getShadingSiblings(block.blockX, block.blockY, block.blockZ)
-                // console.log(siblings)
+                if (block.by < state.worldHeight / 16) {
+                    block.btype = BlockType.Rock
 
-                let brightness = 1 - (siblings.length / 9)
-                brightness = state.blocks[getBlockId(block.blockX, block.blockY + 1, block.blockZ)] ? 1 : 0
+                } else if (block.by < state.worldHeight / 8) {
+                    block.btype = BlockType.Gravel
+                } else if (block.by < state.worldHeight / 4) {
+                    block.btype = BlockType.Sand
+                } else {
+                    block.btype = BlockType.Dirt
+                }
+            }
+        })
+    }
 
-                this._instancedAttribute.setXYZW(block.instanceIndex, 0, 0, brightness, block.instanceIndex)
+    _updateBlocksShading() {
+        this.blocks.forEach((block, index) => {
+            let lightness = 1
+            let sibDistance = 2
+            block.iterateSiblings(sibDistance, (block, dx, dy, dz) => {
+                let shadingFactor = 0
+                if (dy >= 0) {
+                    shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5)
+                    shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5)
+                    shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5)
+                    shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5)
+                    shadingFactor /= 4
+                }
+                lightness *= lerp(1, 0.95, shadingFactor);
             })
 
-            this._instancedAttribute.needsUpdate = true
-            done()
-        }, ['chunk', this.chunkId, 'update-materials'], QueueType.Random)
+            block.lightness = lightness
+        })
     }
 
-    getMaxSiblingsCount() {
-        return 6
-    }
+    _updateInstancedAttributes() {
+        this.blocks.forEach((block, index) => {
+            this._instancedAttribute.setXYZ(block.instanceIndex, block.tileX, block.tileY, block.lightness)
+        })
 
-    getShadingSiblings(bx, by, bz) {
-        let siblings = []
-
-        for (let x = -1; x < 1; x++) {
-            for (let z = -1; z < 1; z++) {
-                if (state.blocks[getBlockId(bx + x, by + 1, bz + z)]) {
-                    siblings.push(state.blocks[getBlockId(bx + x, by + 1, bz + z)])
-                }
-
-            }
-        }
-
-        return siblings
-    }
-
-    getSiblings(bx, by, bz) {
-        let siblings = []
-
-        if (state.blocks[getBlockId(bx + 1, by, bz)]) {
-            siblings.push(state.blocks[getBlockId(bx + 1, by, bz)])
-        }
-
-        if (state.blocks[getBlockId(bx - 1, by, bz)]) {
-            siblings.push(state.blocks[getBlockId(bx - 1, by, bz)])
-        }
-
-        if (state.blocks[getBlockId(bx, by + 1, bz)]) {
-            siblings.push(state.blocks[getBlockId(bx, by + 1, bz)])
-        }
-
-        if (state.blocks[getBlockId(bx, by - 1, bz)]) {
-            siblings.push(state.blocks[getBlockId(bx, by - 1, bz)])
-        }
-
-        if (state.blocks[getBlockId(bx, by, bz + 1)]) {
-            siblings.push(state.blocks[getBlockId(bx, by, bz + 1)])
-        }
-
-        if (state.blocks[getBlockId(bx, by, bz - 1)]) {
-            siblings.push(state.blocks[getBlockId(bx, by, bz - 1)])
-        }
-
-
-        return siblings
+        this._instancedAttribute.needsUpdate = true
     }
 
     update() {
@@ -252,5 +294,9 @@ export class Chunk extends Group {
             this._buildTask = null
         }
         this._instancedBlockGeometry.dispose()
+    }
+
+    override toString() {
+        return `Chunk(cx=${this.cx}, cz=${this.cz})`
     }
 }

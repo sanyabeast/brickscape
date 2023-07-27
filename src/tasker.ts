@@ -102,7 +102,6 @@ export class Tasker {
 
         let index = replaceMatch ? findIndex(targetQueue, (el) => el.match(tags)) : -1
         if (index >= 0) {
-            console.log(`replace normal q task: ${index}`)
             targetQueue[index] = task
         } else {
             targetQueue.unshift(task)
@@ -143,7 +142,7 @@ export class Tasker {
         this._reversedQueue = cleanedReversedQueue
         this._randomQueue = cleanRandomQueue
 
-        logd('Tasker.flush', `tasks removed from queue: normal - ${this._normalQueue.length - cleanedNormalQueue.length}; reversed - ${this._reversedQueue.length - cleanedReversedQueue.length}; random - ${this._randomQueue.length - cleanRandomQueue.length}`)
+        // logd('Tasker.flush', `tasks removed from queue: normal - ${this._normalQueue.length - cleanedNormalQueue.length}; reversed - ${this._reversedQueue.length - cleanedReversedQueue.length}; random - ${this._randomQueue.length - cleanRandomQueue.length}`)
 
         this._locked = false
     }

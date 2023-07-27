@@ -33,3 +33,7 @@ export function getBlockId(bx: number, by: number, bz: number): string {
 export function getRandomHexColor() {
     return Math.floor(Math.random() * 16777215)
 }
+
+export function distance(ax, ay, bx, by): number {
+    return Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2))
+}
