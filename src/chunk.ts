@@ -1,29 +1,33 @@
-import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshPhongMaterial, MeshStandardMaterial, MeshLambertMaterial } from "three"
+import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh } from "three"
 import { getBlockId, getChunkId, getRandomHexColor } from "./utils"
 import { state } from "./state"
-import { debounce } from "lodash"
+import { debounce, throttle } from "lodash"
+import { VoxelBlockMaterial } from "./shaders"
 
 const blockGeometry = new BoxGeometry(1, 1, 1);
+const blockDummyMaterial = new MeshLambertMaterial();
 
 export class Block extends Mesh {
     blockX: number = null
     blockY: number = null
     blockZ: number = null
     blockId: string = null
-    override material: MeshLambertMaterial
+    override material: VoxelBlockMaterial
     constructor({ chunk, x, y, z }) {
         const geometry = blockGeometry;
         // const material = new MeshBasicMaterial({ color: getRandomHexColor() });
-        const material = new MeshLambertMaterial({ color: getRandomHexColor()});
+        const material = blockDummyMaterial
         super(geometry, material);
 
         this.blockX = x + chunk.cx;
         this.blockY = y;
         this.blockZ = z + chunk.cz;
         this.blockId = getBlockId(x + chunk.cx, y, z + chunk.cz);
-        this.position.set(x, y, z)
+
         state.blocks[this.blockId] = this
-        chunk.add(this);
+
+        this.position.set(x, y, z)
+        this.updateMatrix()
     }
 
     kill() {
@@ -33,12 +37,13 @@ export class Block extends Mesh {
 }
 
 export class Chunk extends Group {
-    chunkId = null
-    cx = null
-    cz = null
-    createdAt = null
-    active = false
-    blocks = null
+    chunkId: string = null
+    cx: number = null
+    cz: number = null
+    createdAt: number = null
+    active: boolean = false
+    blocks: Block[] = null
+    instanced: InstancedMesh[] = null
 
     constructor({ cx, cz }) {
         super()
@@ -47,21 +52,34 @@ export class Chunk extends Group {
         this.chunkId = getChunkId(cx, cz)
         this.createdAt = +new Date()
         this.blocks = []
+        this.instanced = []
 
         this.position.set(cx * state.chunkSize, 0, cz * state.chunkSize)
-
         this.matrixAutoUpdate = false
 
         this.visible = false
-        this._buildChunk()
-        this.updateMatrix()
-        this.visible = true
-        this.refresh = debounce(this.refresh.bind(this), 250)
+        state.tasker.add((done) => {
+            this._buildChunk()
+
+            this.refresh = debounce(this.refresh.bind(this), 32)
+            this.updateChunkMatrix = throttle(this.updateChunkMatrix.bind(this), 1000 / 15)
+            this.updateChunkMatrix()
+            this.visible = true
+            done()
+        })
 
     }
 
     refresh() {
-        this._updateBlocksMaterials()
+
+    }
+
+    updateChunkMatrix() {
+
+        this.instanced.forEach((mesh: InstancedMesh) => {
+            mesh.instanceMatrix.needsUpdate = true
+        })
+        this.updateMatrix()
     }
 
     _buildChunk() {
@@ -88,12 +106,27 @@ export class Chunk extends Group {
                     } else {
                         console.log(state[blockId])
                     }
-
                 }
+
+                setTimeout(() => {
+                    this._generateInstancedMeshes()
+                })
             }
         }
 
-        this._updateBlocksMaterials()
+        setTimeout(() => {
+            this._updateBlocksMaterials()
+        })
+    }
+
+    _generateInstancedMeshes() {
+        let material = new VoxelBlockMaterial({ color: 0xEEEEEE })
+        const instancedMesh = new InstancedMesh(blockGeometry, material, this.blocks.length);
+        this.blocks.forEach((block, index) => {
+            instancedMesh.setMatrixAt(index, block.matrix);
+        })
+        this.add(instancedMesh)
+        this.instanced.push(instancedMesh)
     }
 
     _updateBlocksMaterials() {

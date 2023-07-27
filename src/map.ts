@@ -19,8 +19,8 @@ export function getCameraLookIntersection(camera) {
 export class VoxelMap extends Group {
     camera = null
     activeChunk = null
-    
-    get chunks () {
+
+    get chunks() {
         return state.chunks
     }
 
@@ -63,7 +63,7 @@ export class VoxelMap extends Group {
         }
 
         for (let k in this.chunks) {
-            if (this.chunks[k].active){
+            if (this.chunks[k].active) {
                 this.add(this.chunks[k])
             } else {
                 this.remove(this.chunks[k])
@@ -85,7 +85,6 @@ export class VoxelMap extends Group {
         } else {
             chunk.refresh()
         }
-
 
         return chunk
     }

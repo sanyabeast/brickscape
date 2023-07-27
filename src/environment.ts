@@ -10,10 +10,6 @@ export class Environment extends Group {
     constructor({ scene, camera, renderer }) {
         super()
 
-        const sun = this.sun = new DirectionalLight()
-        sun.position.set(1, 4, 1)
-        scene.add(sun)
-
         // 
         const ambient = new HemisphereLight(0xffff00, 0x0000ff)
         scene.add(ambient)

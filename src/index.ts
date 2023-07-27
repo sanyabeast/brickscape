@@ -5,16 +5,18 @@ import { createGui } from './gui';
 import { state } from './state'
 import { Environment } from './environment';
 import { VoxelWorldGenerator } from './generator';
+import { Tasker } from './tasker';
 
 
 function main() {
 
     state.generator = new VoxelWorldGenerator(state.seed)
+    state.tasker = new Tasker({ rate: 15 })
 
     const pixelRatio = window.devicePixelRatio
     const fov = 75;
-    const near = 0.01;
-    const far = 100000;
+    const near = 0.1;
+    const far = 256;
     let aspect = 2;  // the canvas default
 
     const canvas = state.canvas = document.querySelector('#c');
@@ -72,6 +74,7 @@ function main() {
 
     window.state = state
 
+    state.tasker.start()
     updateRenderSize()
     requestAnimationFrame(render);
 

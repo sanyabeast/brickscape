@@ -2,6 +2,7 @@ import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
 import { Block, Chunk } from "./chunk"
 import { VoxelWorldGenerator } from "./generator"
 import { VoxelMapControls as VoxelWorldControls } from "./controls"
+import { Tasker } from "./tasker"
 
 interface IVoxelWorldState {
     [x: string]: any
@@ -20,14 +21,15 @@ interface IVoxelWorldState {
     camera: PerspectiveCamera
     scene: Scene
     renderer: WebGLRenderer
-    generator: VoxelWorldGenerator
+    generator: VoxelWorldGenerator,
+    tasker: Tasker
 }
 
 export const state: IVoxelWorldState = {
     seed: 123,
-    chunkSize: 32,
-    drawChunks: 1,
-    worldHeight: 12,
+    chunkSize: 8,
+    drawChunks: 3,
+    worldHeight: 8,
     camera: null,
     scene: null,
     renderer: null,
@@ -36,5 +38,6 @@ export const state: IVoxelWorldState = {
     canvas: null,
     chunks: {},
     blocks: {},
-    generator: null
+    generator: null,
+    tasker: null
 }
