@@ -1,189 +1,16 @@
-import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh, Object3D, InstancedBufferGeometry, InstancedBufferAttribute, TextureLoader, BufferGeometry, CylinderGeometry } from "three"
-import { dummy, getBlockId, getChunkId, getRandomHexColor, lerp } from "./utils"
-import { BlockShape, blocksHelper, maxBlocksInChunk, state } from "./state"
-import { debounce, filter, isNumber, isUndefined, orderBy, throttle, values } from "lodash"
+import { Group, InstancedMesh, InstancedBufferGeometry, InstancedBufferAttribute } from "three"
+import { dummy, getChunkId, lerp } from "./utils"
+import { state } from "./state"
+import { debounce, throttle } from "lodash"
 import { VoxelBlockMaterial } from "./shaders"
 import { QueueType, Task } from "./tasker"
+import { Block, BlockType, BlocksManager } from "./blocks"
 
 
 let _chunksCounter = 0;
-const maxBlockAge = 2
 
-enum BlockType {
-    None,
-    Gravel,
-    Rock,
-    Dirt,
-    Sand,
-    Bedrock,
-    Water
-}
-
-export interface IBlockTable {
-    [x: string]: {
-        type: BlockType
-        tile: number[],
-        generate?: boolean,
-        levels?: number[],
-        rate?: number,
-        replace?: boolean,
-        order?: number
-    }
-}
-
-export const blockTable: IBlockTable = {
-    [BlockType.None]: {
-        type: BlockType.None,
-        tile: [0, 0],
-    },
-    [BlockType.Gravel]: {
-        type: BlockType.Gravel,
-        tile: [0, 0]
-    },
-    [BlockType.Rock]: {
-        type: BlockType.Rock,
-        tile: [0, 1]
-    },
-    [BlockType.Dirt]: {
-        type: BlockType.Dirt,
-        tile: [2, 0],
-        generate: true,
-        levels: [4, 32],
-        rate: 1,
-        replace: false,
-        order: 0
-    },
-    [BlockType.Sand]: {
-        type: BlockType.Sand,
-        tile: [2, 1]
-    },
-    [BlockType.Bedrock]: {
-        type: BlockType.Bedrock,
-        tile: [1, 1]
-    },
-    [BlockType.Water]: {
-        type: BlockType.Water,
-        tile: [15, 13]
-    }
-}
-
-export const blockTableOrdered = orderBy(filter(values(blockTable), (d) => d.generate), (d) => d.order)
-
-function _getInstanceIndex(x, y, z): number {
-    return Math.floor(x + state.chunkSize * (y + state.worldHeight * z))
-    // let  index = 0;
-    // for (let ix = 0; ix < x; ix++){
-    //     for (let iz = 0; iz < z; iz++){
-    //         for (let iy = 0; iy < y; iy++){
-    //             index++
-    //         }
-    //     }
-    // }
-    // return index
-}
-
-export type FChunkGridIteratee = (x: number, y: number, z: number, instanceIndex: number, blockId: string, block?: Block) => void
+export type FChunkGridIteratee = (x: number, y: number, z: number, instanceIndex: number, block?: Block) => void
 export type FChunkGridIterateeXZ = (x: number, z: number) => void
-export type FSiblingIteratee = (sibling: Block, dx: number, dy: number, dz: number) => void
-export class Block extends Object3D {
-    static getShapeGeometry(): InstancedBufferGeometry {
-        switch (state.blockShape) {
-            case BlockShape.Prism6: {
-                let g = new CylinderGeometry(1, 1, 1, 6) as any as InstancedBufferGeometry
-                g.scale(1 / 1.732, 1, 1 / 1.5);
-                return g;
-            }
-            default: {
-                return new BoxGeometry(1, 1, 1) as any as InstancedBufferGeometry
-            }
-        }
-    }
-
-    bx: number = null
-    by: number = null
-    bz: number = null
-    bid: string = null
-    btype: BlockType = BlockType.None
-    instanceIndex: number = null
-    lightness: number = 1
-    lastUpdate: number = Math.random()
-
-    get age() {
-        return (+new Date() - this.lastUpdate) / 1000
-    }
-
-    get tileX(): number {
-        return blockTable[this.btype].tile[0]
-    }
-
-    get tileY(): number {
-        return blockTable[this.btype].tile[1]
-    }
-
-    constructor({ x, y, z, chunk, lightness, blockType }) {
-        // const material = new MeshBasicMaterial({ color: getRandomHexColor() });
-        super();
-
-        this.bx = x;
-        this.by = y;
-        this.bz = z;
-        this.bid = getBlockId(x, y, z);
-
-        if (state.blocks[this.bid]) {
-            console.log(`block exists at: ${x}, ${y}, ${z}`)
-            return this
-        }
-
-        state.blocks[this.bid] = this
-
-        switch (state.blockShape) {
-            case BlockShape.Prism6: {
-                if (z % 2 == 0) {
-                    x += 0.5
-                }
-                this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
-                break;
-            }
-            default: {
-                this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
-            }
-        }
-
-        this.instanceIndex = _getInstanceIndex(
-            x - chunk.position.x, y - chunk.position.y, z - chunk.position.z
-        )
-
-        this.update({ lightness, blockType })
-        this.lastUpdate = 0
-        this.updateMatrix()
-    }
-
-    kill() {
-        delete state.blocks[this.bid]
-    }
-
-    iterateSiblings(distance: number = 1, iteratee: FSiblingIteratee) {
-        distance = Math.round(distance)
-        for (let x = -distance; x <= distance; x++) {
-            for (let y = -distance; y <= distance; y++) {
-                for (let z = -distance; z <= distance; z++) {
-                    let blockId = getBlockId(x + this.bx, y + this.by, z + this.bz)
-                    let siblingBlock = state.blocks[blockId]
-                    if (siblingBlock) {
-                        iteratee(siblingBlock, x, y, z)
-                    }
-                }
-            }
-        }
-    }
-    update({ lightness, blockType }): boolean {
-        let changed = (lightness !== this.lightness) || (blockType !== this.btype)
-        this.lightness = lightness
-        this.btype = blockType
-        this.lastUpdate = +new Date()
-        return changed
-    }
-}
 
 export class Chunk extends Group {
     cid: string = null
@@ -230,9 +57,9 @@ export class Chunk extends Group {
     _initBlockGeometry() {
         if (this._instancedBlockGeometry === null) {
             this._instancedBlockGeometry = new InstancedBufferGeometry().copy(Block.getShapeGeometry());
-            let instanceIndices = new Float32Array(maxBlocksInChunk * 3 * 10)
+            let instanceIndices = new Float32Array(BlocksManager.maxBlocksPerChunk * 3 * 10)
             let attribute = this._instancedAttribute = new InstancedBufferAttribute(instanceIndices, 3);
-            for (let i = 0; i < maxBlocksInChunk; i++) {
+            for (let i = 0; i < BlocksManager.maxBlocksPerChunk; i++) {
                 attribute.setXYZ(i, 0, 0, 1);
             }
             this._instancedBlockGeometry.setAttribute('instanceData', attribute);
@@ -284,8 +111,8 @@ export class Chunk extends Group {
 
     _getOutdatedBlocksCount(): number {
         let i = 0;
-        this._iterateChunkGrid((x, y, z, instanceIndex, blockId, block) => {
-            if (block && block.age > maxBlockAge) {
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block && block.isOutdated) {
                 i++
             }
         })
@@ -338,7 +165,7 @@ export class Chunk extends Group {
         let waterLevel = 3
 
         this._iterateChunkGridXZ((x, z) => {
-            let existingBlock = blocksHelper.getBlockAt(x, waterLevel, z)
+            let existingBlock = BlocksManager.getBlockAt(x, waterLevel, z)
             if (!existingBlock) {
                 new Block({
                     chunk: this,
@@ -348,10 +175,7 @@ export class Chunk extends Group {
                     lightness: 1,
                     blockType: BlockType.Water
                 })
-            } else {
-                console.log(`block exists`)
             }
-
         })
 
 
@@ -360,8 +184,7 @@ export class Chunk extends Group {
 
     _updateBlocksTypes(): boolean {
         let changed = false
-        console.log(blockTableOrdered)
-        this._iterateChunkGrid((x, y, z, instanceIndex, blockId, block) => {
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
             if (block) {
                 if (block.btype === BlockType.None) {
                     let blockType = BlockType.Dirt;
@@ -387,7 +210,7 @@ export class Chunk extends Group {
 
     _updateBlocksShading() {
         let changed = false
-        this._iterateChunkGrid((x, y, z, instanceIndex, blockId, block) => {
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
             if (block) {
                 let lightness = 1
                 let sibDistance = 2
@@ -419,8 +242,7 @@ export class Chunk extends Group {
         for (let z = 0; z < state.chunkSize; z++) {
             for (let x = 0; x < state.chunkSize; x++) {
                 for (let y = 0; y < state.worldHeight; y++) {
-                    let blockId = getBlockId(x + (this.cx * state.chunkSize), y, z + (this.cz * state.chunkSize))
-                    iteratee(x + (this.cx * state.chunkSize), y, z + (this.cz * state.chunkSize), _getInstanceIndex(x, y, z), blockId, state.blocks[blockId])
+                    iteratee(x + (this.cx * state.chunkSize), y, z + (this.cz * state.chunkSize), BlocksManager.getInstanceIndex(x, y, z), BlocksManager.getBlockAt(x + (this.cx * state.chunkSize), y, z + (this.cz * state.chunkSize)))
                 }
             }
         }
@@ -435,9 +257,9 @@ export class Chunk extends Group {
     }
 
     _generateInstancedMeshes() {
-        let material = new VoxelBlockMaterial({ color: 0xFFFFFF })
-        const instancedMesh = this._instancedMesh = new InstancedMesh(this._instancedBlockGeometry, material, maxBlocksInChunk);
-        this._iterateChunkGrid((x, y, z, instanceIndex, blockId, block) => {
+        let material = new VoxelBlockMaterial({ color: 0xFFFFFF, maxInstances: BlocksManager.maxBlocksPerChunk, state })
+        const instancedMesh = this._instancedMesh = new InstancedMesh(this._instancedBlockGeometry, material, BlocksManager.maxBlocksPerChunk);
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
             if (block) {
                 instancedMesh.setMatrixAt(instanceIndex, block.matrix);
             } else {
@@ -449,7 +271,7 @@ export class Chunk extends Group {
     }
 
     _updateInstancedAttributes() {
-        this._iterateChunkGrid((x, y, z, instanceIndex, blockId, block) => {
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
             if (block) {
                 this._instancedAttribute.setXYZ(block.instanceIndex, block.tileX, block.tileY, block.lightness)
             }

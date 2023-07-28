@@ -1,12 +1,11 @@
-import { ShaderMaterial, Color, Vector3, TextureLoader, Vector2 } from "three";
-import { maxBlocksInChunk, state } from "./state";
+import { ShaderMaterial, Color, Vector3, TextureLoader } from "three";
 
-let _textureLoader =  new TextureLoader()
+let _textureLoader = new TextureLoader()
 let _tilemap = _textureLoader.load('assets/tiles.png')
 _tilemap.flipY = false
 
 export class VoxelBlockMaterial extends ShaderMaterial {
-  constructor({ color }) {
+  constructor({ color, maxInstances, state }) {
     super({
       // Uniforms
       uniforms: {
@@ -14,9 +13,9 @@ export class VoxelBlockMaterial extends ShaderMaterial {
         uLightDirection: { value: new Vector3(0, 10, 2).normalize() },
         uFar: { value: state.camera.far }, // Far plane
         uNear: { value: state.camera.near }, // Near plane
-        uMaxInstances: {value: maxBlocksInChunk},
-        uTiles: {value: _tilemap},
-        uTileSize: {value: 1/16}
+        uMaxInstances: { value: maxInstances },
+        uTiles: { value: _tilemap },
+        uTileSize: { value: 1 / 16 }
       },
       // Vertex shader
       vertexShader: `

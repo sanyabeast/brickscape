@@ -27,10 +27,6 @@ export function getChunkId(cx: number, cz: number): string {
     return `${cx}_${cz}`
 }
 
-export function getBlockId(bx: number, by: number, bz: number): string {
-    return `${Math.round(bx)}_${Math.round(by)}_${Math.round(bz)}`
-}
-
 export function getRandomHexColor() {
     return Math.floor(Math.random() * 16777215)
 }
