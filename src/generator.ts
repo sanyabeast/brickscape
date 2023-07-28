@@ -36,7 +36,6 @@ export class Sine {
     }
 }
 
-
 export class VoxelWorldGenerator {
     seed = null
     sine: Sine = null

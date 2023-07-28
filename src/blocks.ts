@@ -23,48 +23,30 @@ export enum BlockType {
 
 export interface IBlockTable {
     [x: string]: {
-        type: BlockType
         tile: number[],
-        generate?: boolean,
-        levels?: number[],
-        rate?: number,
-        replace?: boolean,
-        order?: number
     }
 }
 
 export const blockTable: IBlockTable = {
     [BlockType.None]: {
-        type: BlockType.None,
         tile: [0, 0],
     },
     [BlockType.Gravel]: {
-        type: BlockType.Gravel,
         tile: [0, 0]
     },
     [BlockType.Rock]: {
-        type: BlockType.Rock,
         tile: [0, 1]
     },
     [BlockType.Dirt]: {
-        type: BlockType.Dirt,
         tile: [2, 0],
-        generate: true,
-        levels: [4, 32],
-        rate: 1,
-        replace: false,
-        order: 0
     },
     [BlockType.Sand]: {
-        type: BlockType.Sand,
         tile: [2, 1]
     },
     [BlockType.Bedrock]: {
-        type: BlockType.Bedrock,
         tile: [1, 1]
     },
     [BlockType.Water]: {
-        type: BlockType.Water,
         tile: [15, 13]
     }
 }

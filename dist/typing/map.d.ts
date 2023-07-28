@@ -4,6 +4,9 @@ export declare function getCameraLookIntersection(camera: any): Vector3;
 export declare class VoxelMap extends Group {
     camera: any;
     activeChunk: any;
+    chunks: {
+        [x: string]: Chunk;
+    };
     constructor({ camera }: {
         camera: any;
     });

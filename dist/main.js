@@ -17248,32 +17248,32 @@ var __WEBPACK_AMD_DEFINE_RESULT__;/**
 
 /***/ }),
 
-/***/ "./src/chunk.ts":
-/*!**********************!*\
-  !*** ./src/chunk.ts ***!
-  \**********************/
+/***/ "./src/blocks.ts":
+/*!***********************!*\
+  !*** ./src/blocks.ts ***!
+  \***********************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   Block: () => (/* binding */ Block),
-/* harmony export */   Chunk: () => (/* binding */ Chunk)
+/* harmony export */   BlockShape: () => (/* binding */ BlockShape),
+/* harmony export */   BlockType: () => (/* binding */ BlockType),
+/* harmony export */   BlocksManager: () => (/* binding */ BlocksManager),
+/* harmony export */   blockTable: () => (/* binding */ blockTable)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
-/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _shaders__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders */ "./src/shaders.ts");
-/* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state */ "./src/state.ts");
 
 
-
-
-
-
-let _chunksCounter = 0;
+const maxBlockAge = 2;
+let _blocksCounter = 0;
+var BlockShape;
+(function (BlockShape) {
+    BlockShape[BlockShape["Cube"] = 0] = "Cube";
+    BlockShape[BlockShape["Prism6"] = 1] = "Prism6";
+})(BlockShape || (BlockShape = {}));
 var BlockType;
 (function (BlockType) {
     BlockType[BlockType["None"] = 0] = "None";
@@ -17281,44 +17281,73 @@ var BlockType;
     BlockType[BlockType["Rock"] = 2] = "Rock";
     BlockType[BlockType["Dirt"] = 3] = "Dirt";
     BlockType[BlockType["Sand"] = 4] = "Sand";
+    BlockType[BlockType["Bedrock"] = 5] = "Bedrock";
+    BlockType[BlockType["Water"] = 6] = "Water";
 })(BlockType || (BlockType = {}));
-const blockTypes = {
+const blockTable = {
     [BlockType.None]: {
-        tile: [0, 0]
+        type: BlockType.None,
+        tile: [0, 0],
     },
     [BlockType.Gravel]: {
+        type: BlockType.Gravel,
         tile: [0, 0]
     },
     [BlockType.Rock]: {
+        type: BlockType.Rock,
         tile: [0, 1]
     },
     [BlockType.Dirt]: {
-        tile: [2, 0]
+        type: BlockType.Dirt,
+        tile: [2, 0],
+        generate: true,
+        levels: [4, 32],
+        rate: 1,
+        replace: false,
+        order: 0
     },
     [BlockType.Sand]: {
+        type: BlockType.Sand,
         tile: [2, 1]
+    },
+    [BlockType.Bedrock]: {
+        type: BlockType.Bedrock,
+        tile: [1, 1]
+    },
+    [BlockType.Water]: {
+        type: BlockType.Water,
+        tile: [15, 13]
     }
 };
-class Block extends three__WEBPACK_IMPORTED_MODULE_5__.Object3D {
+class Block extends three__WEBPACK_IMPORTED_MODULE_1__.Object3D {
     static getShapeGeometry() {
-        switch (_state__WEBPACK_IMPORTED_MODULE_1__.state.blockShape) {
-            case _state__WEBPACK_IMPORTED_MODULE_1__.BlockShape.Prism6: {
-                let g = new three__WEBPACK_IMPORTED_MODULE_5__.CylinderGeometry(1, 1, 1, 6);
+        switch (_state__WEBPACK_IMPORTED_MODULE_0__.state.blockShape) {
+            case BlockShape.Prism6: {
+                let g = new three__WEBPACK_IMPORTED_MODULE_1__.CylinderGeometry(1, 1, 1, 6);
                 g.scale(1 / 1.732, 1, 1 / 1.5);
                 return g;
             }
             default: {
-                return new three__WEBPACK_IMPORTED_MODULE_5__.BoxGeometry(1, 1, 1);
+                return new three__WEBPACK_IMPORTED_MODULE_1__.BoxGeometry(1, 1, 1);
             }
         }
     }
+    get age() {
+        return (+new Date() - this.lastUpdate) / 1000;
+    }
+    get isOutdated() {
+        return this.age > maxBlockAge;
+    }
     get tileX() {
-        return blockTypes[this.btype].tile[0];
+        return blockTable[this.btype].tile[0];
     }
     get tileY() {
-        return blockTypes[this.btype].tile[1];
+        return blockTable[this.btype].tile[1];
     }
-    constructor({ x, y, z, chunk }) {
+    constructor({ x, y, z, chunk, lightness, blockType }) {
+        if (BlocksManager.getBlockAt(x, y, z)) {
+            return BlocksManager.getBlockAt(x, y, z);
+        }
         // const material = new MeshBasicMaterial({ color: getRandomHexColor() });
         super();
         this.bx = null;
@@ -17328,13 +17357,17 @@ class Block extends three__WEBPACK_IMPORTED_MODULE_5__.Object3D {
         this.btype = BlockType.None;
         this.instanceIndex = null;
         this.lightness = 1;
+        this.lastUpdate = Math.random();
+        this.serial = null;
         this.bx = x;
         this.by = y;
         this.bz = z;
-        this.bid = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getBlockId)(x, y, z);
-        _state__WEBPACK_IMPORTED_MODULE_1__.state.blocks[this.bid] = this;
-        switch (_state__WEBPACK_IMPORTED_MODULE_1__.state.blockShape) {
-            case _state__WEBPACK_IMPORTED_MODULE_1__.BlockShape.Prism6: {
+        this.bid = BlocksManager.getBlockId(x, y, z);
+        this.serial = _blocksCounter;
+        _blocksCounter++;
+        BlocksManager.blocks[this.bid] = this;
+        switch (_state__WEBPACK_IMPORTED_MODULE_0__.state.blockShape) {
+            case BlockShape.Prism6: {
                 if (z % 2 == 0) {
                     x += 0.5;
                 }
@@ -17345,18 +17378,20 @@ class Block extends three__WEBPACK_IMPORTED_MODULE_5__.Object3D {
                 this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z);
             }
         }
+        this.instanceIndex = BlocksManager.getInstanceIndex(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z);
+        this.update({ lightness, blockType });
+        this.lastUpdate = 0;
         this.updateMatrix();
     }
     kill() {
-        delete _state__WEBPACK_IMPORTED_MODULE_1__.state.blocks[this.bid];
+        delete BlocksManager.blocks[this.bid];
     }
     iterateSiblings(distance = 1, iteratee) {
         distance = Math.round(distance);
         for (let x = -distance; x <= distance; x++) {
             for (let y = -distance; y <= distance; y++) {
                 for (let z = -distance; z <= distance; z++) {
-                    let blockId = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getBlockId)(x + this.bx, y + this.by, z + this.bz);
-                    let siblingBlock = _state__WEBPACK_IMPORTED_MODULE_1__.state.blocks[blockId];
+                    let siblingBlock = BlocksManager.getBlockAt(x + this.bx, y + this.by, z + this.bz);
                     if (siblingBlock) {
                         iteratee(siblingBlock, x, y, z);
                     }
@@ -17364,8 +17399,93 @@ class Block extends three__WEBPACK_IMPORTED_MODULE_5__.Object3D {
             }
         }
     }
+    update({ lightness, blockType }) {
+        let changed = (lightness !== this.lightness) || (blockType !== this.btype);
+        this.lightness = lightness;
+        this.btype = blockType;
+        this.lastUpdate = +new Date();
+        return changed;
+    }
 }
-class Chunk extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
+class BlocksManager {
+    static getBlockId(bx, by, bz) {
+        return `${Math.round(bx)}_${Math.round(by)}_${Math.round(bz)}`;
+    }
+    static getMostElevatedBlockAt(x, z) {
+        let r = null;
+        for (let i = 0; i < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight; i++) {
+            let b = BlocksManager.getBlockAt(x, i, z);
+            if (b) {
+                r = b;
+            }
+        }
+        return r;
+    }
+    static getElevationAt(x, z) {
+        let r = 0;
+        for (let i = 0; i < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight; i++) {
+            let b = BlocksManager.getBlockAt(x, i, z);
+            if (b) {
+                r = i;
+            }
+        }
+        return r;
+    }
+    static getBlockAt(x, y, z) {
+        return BlocksManager.blocks[BlocksManager.getBlockId(x, y, z)];
+    }
+    static getInstanceIndex(x, y, z) {
+        return Math.floor(x + _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize * (y + _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight * z));
+        // let  index = 0;
+        // for (let ix = 0; ix < x; ix++){
+        //     for (let iz = 0; iz < z; iz++){
+        //         for (let iy = 0; iy < y; iy++){
+        //             index++
+        //         }
+        //     }
+        // }
+        // return index
+    }
+    static get maxBlocksPerChunk() {
+        return _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize * _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize * _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight;
+    }
+}
+BlocksManager.blocks = {};
+
+
+/***/ }),
+
+/***/ "./src/chunk.ts":
+/*!**********************!*\
+  !*** ./src/chunk.ts ***!
+  \**********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Chunk: () => (/* binding */ Chunk)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _shaders__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders */ "./src/shaders.ts");
+/* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+
+
+
+
+
+
+
+let _chunksCounter = 0;
+class Chunk extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
+    get age() {
+        return (+new Date() - this.lastUpdate) / 1000;
+    }
     constructor({ cx, cz }) {
         super();
         this.cid = null;
@@ -17380,6 +17500,7 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
         this._instancedBlockGeometry = null;
         this._instancedAttribute = null;
         this._instancedMesh = null;
+        this.lastUpdate = 0;
         this.cx = cx;
         this.cz = cz;
         this.cid = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getChunkId)(cx, cz);
@@ -17390,146 +17511,209 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
         this.position.set(cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize, 0, cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize);
         this.matrixAutoUpdate = false;
         this.visible = false;
-        this.updateChunkMatrix = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.throttle)(this.updateChunkMatrix.bind(this), 1000 / 15);
-        this.refresh = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.debounce)(this.refresh.bind(this), 32);
-        this.refresh();
+        this._updateChunkMatrix = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.throttle)(this._updateChunkMatrix.bind(this), 1000 / 15);
+        this.update = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.debounce)(this.update.bind(this), 32);
+        this.update();
     }
     _initBlockGeometry() {
         if (this._instancedBlockGeometry === null) {
-            this._instancedBlockGeometry = new three__WEBPACK_IMPORTED_MODULE_5__.InstancedBufferGeometry().copy(Block.getShapeGeometry());
-            let instanceIndices = new Float32Array(_state__WEBPACK_IMPORTED_MODULE_1__.maxBlocksInChunk * 3 * 10);
-            let attribute = this._instancedAttribute = new three__WEBPACK_IMPORTED_MODULE_5__.InstancedBufferAttribute(instanceIndices, 3);
-            for (let i = 0; i < _state__WEBPACK_IMPORTED_MODULE_1__.maxBlocksInChunk; i++) {
+            this._instancedBlockGeometry = new three__WEBPACK_IMPORTED_MODULE_6__.InstancedBufferGeometry().copy(_blocks__WEBPACK_IMPORTED_MODULE_5__.Block.getShapeGeometry());
+            let instanceIndices = new Float32Array(_blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.maxBlocksPerChunk * 3 * 10);
+            let attribute = this._instancedAttribute = new three__WEBPACK_IMPORTED_MODULE_6__.InstancedBufferAttribute(instanceIndices, 3);
+            for (let i = 0; i < _blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.maxBlocksPerChunk; i++) {
                 attribute.setXYZ(i, 0, 0, 1);
             }
             this._instancedBlockGeometry.setAttribute('instanceData', attribute);
         }
     }
-    refresh() {
+    update() {
         if (!this._built) {
             this._buildTask = _state__WEBPACK_IMPORTED_MODULE_1__.state.tasker.add((done) => {
                 this._built = true;
                 this._buildTask = null;
                 this._initBlockGeometry();
                 this._buildChunk();
-                this.updateChunkMatrix();
-                this.updateBlocks();
+                this.updateChunk();
+                this._updateChunkMatrix();
                 this.visible = true;
                 done();
             }, ['chunk', this.cid], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Reversed);
         }
         else {
-            this.updateBlocks();
+            this.updateChunk();
         }
     }
-    updateBlocks() {
+    updateChunk() {
         // console.log(`updating blocks at ${this.toString()}...`)
         if (this._built) {
-            _state__WEBPACK_IMPORTED_MODULE_1__.state.tasker.add((done) => {
-                this._updateBlocksShading();
-                this._updateInstancedAttributes();
-                done();
-            }, ['chunk', this.cid, 'update-blocks-shading'], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Reversed);
-            this._updateBlocksTypes();
-            this._updateInstancedAttributes();
+            let outdatetBlocksCount = this._getOutdatedBlocksCount();
+            if (outdatetBlocksCount > 0) {
+                let shadingChanged = this._updateBlocksShading();
+                let blockTypesChanged = this._updateBlocksTypes();
+                if (shadingChanged || blockTypesChanged) {
+                    this._updateInstancedAttributes();
+                }
+                else {
+                    // console.log(`chunk have not changed since last update`)
+                }
+                this.lastUpdate = +new Date();
+            }
+            else {
+                // console.log(`no outdated blocks`)
+            }
         }
     }
-    updateChunkMatrix() {
+    _getOutdatedBlocksCount() {
+        let i = 0;
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block && block.isOutdated) {
+                i++;
+            }
+        });
+        return i;
+    }
+    _updateChunkMatrix() {
         this._instancedMesh.instanceMatrix.needsUpdate = true;
         this.updateMatrix();
     }
     _buildChunk() {
-        // console.log(`building blocks at ${this.toString()}...`)
+        // bedrock level
+        this._iterateChunkGridXZ((x, z) => {
+            new _blocks__WEBPACK_IMPORTED_MODULE_5__.Block({
+                chunk: this,
+                x: x,
+                y: 0,
+                z: z,
+                lightness: 1,
+                blockType: _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.Bedrock
+            });
+        });
+        // main perlin noise
+        this._iterateChunkGridXZ((x, z) => {
+            let noiseValue = _state__WEBPACK_IMPORTED_MODULE_1__.state.generator.getNoiseValue({
+                x: x,
+                y: z,
+                scale: 0.01,
+                iterations: 32
+            });
+            let heightValue = Math.floor(_state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight * noiseValue) + 1;
+            for (let i = 1; i < heightValue; i++) {
+                new _blocks__WEBPACK_IMPORTED_MODULE_5__.Block({
+                    chunk: this,
+                    x: x,
+                    y: i,
+                    z: z,
+                    lightness: 1,
+                    blockType: _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.None
+                });
+            }
+        });
+        // watering
+        let waterLevel = 3;
+        this._iterateChunkGridXZ((x, z) => {
+            let existingBlock = _blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.getBlockAt(x, waterLevel, z);
+            if (!existingBlock) {
+                new _blocks__WEBPACK_IMPORTED_MODULE_5__.Block({
+                    chunk: this,
+                    x: x,
+                    y: waterLevel,
+                    z: z,
+                    lightness: 1,
+                    blockType: _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.Water
+                });
+            }
+        });
+        this._generateInstancedMeshes();
+    }
+    _updateBlocksTypes() {
+        let changed = false;
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block) {
+                if (block.btype === _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.None) {
+                    let blockType = _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.Dirt;
+                    if (block.by < 8 && Math.random() > 0.8) {
+                        blockType = _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.Rock;
+                    }
+                    else if (block.by < 6 && Math.random() > 0.9) {
+                        blockType = _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.Gravel;
+                    }
+                    else if (block.by < 6) {
+                        blockType = _blocks__WEBPACK_IMPORTED_MODULE_5__.BlockType.Sand;
+                    }
+                    let blockChanged = block.update({
+                        lightness: block.lightness,
+                        blockType
+                    });
+                    changed = changed || blockChanged;
+                }
+            }
+        });
+        return changed;
+    }
+    _updateBlocksShading() {
+        let changed = false;
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block) {
+                let lightness = 1;
+                let sibDistance = 2;
+                block.iterateSiblings(sibDistance, (block, dx, dy, dz) => {
+                    let shadingFactor = 0;
+                    if (dy >= 1) {
+                        shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5);
+                        shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5);
+                        shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5);
+                        shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5);
+                        shadingFactor /= 4;
+                    }
+                    lightness *= (0,_utils__WEBPACK_IMPORTED_MODULE_0__.lerp)(1, 0.95, shadingFactor);
+                });
+                let blockChanged = block.update({
+                    lightness,
+                    blockType: block.btype
+                });
+                changed = changed || blockChanged;
+            }
+        });
+        return changed;
+    }
+    _iterateChunkGrid(iteratee) {
         for (let z = 0; z < _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize; z++) {
             for (let x = 0; x < _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize; x++) {
-                let noiseValue = _state__WEBPACK_IMPORTED_MODULE_1__.state.generator.getNoiseValue({
-                    x: x + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize),
-                    y: z + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize),
-                    scale: 0.01,
-                    iterations: 32
-                });
-                let heightValue = Math.floor(_state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight * noiseValue) + 1;
-                for (let i = 0; i < heightValue; i++) {
-                    let blockId = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getBlockId)(x + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize), i, z + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize));
-                    if (_state__WEBPACK_IMPORTED_MODULE_1__.state.blocks[blockId] === undefined) {
-                        this.blocks.push(new Block({
-                            chunk: this,
-                            x: x + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize),
-                            y: i,
-                            z: z + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize)
-                        }));
-                    }
-                    else {
-                        console.log(_state__WEBPACK_IMPORTED_MODULE_1__.state.blocks[blockId]);
-                    }
+                for (let y = 0; y < _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight; y++) {
+                    iteratee(x + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize), y, z + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize), _blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.getInstanceIndex(x, y, z), _blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.getBlockAt(x + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize), y, z + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize)));
                 }
-                this._generateInstancedMeshes();
+            }
+        }
+    }
+    _iterateChunkGridXZ(iteratee) {
+        for (let z = 0; z < _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize; z++) {
+            for (let x = 0; x < _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize; x++) {
+                iteratee(x + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize), z + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize));
             }
         }
     }
     _generateInstancedMeshes() {
-        let material = new _shaders__WEBPACK_IMPORTED_MODULE_3__.VoxelBlockMaterial({ color: 0xFFFFFF });
-        const instancedMesh = this._instancedMesh = new three__WEBPACK_IMPORTED_MODULE_5__.InstancedMesh(this._instancedBlockGeometry, material, this.blocks.length);
-        this.blocks.forEach((block, index) => {
-            block.instanceIndex = index;
-            instancedMesh.setMatrixAt(index, block.matrix);
+        let material = new _shaders__WEBPACK_IMPORTED_MODULE_3__.VoxelBlockMaterial({ color: 0xFFFFFF, maxInstances: _blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.maxBlocksPerChunk, state: _state__WEBPACK_IMPORTED_MODULE_1__.state });
+        const instancedMesh = this._instancedMesh = new three__WEBPACK_IMPORTED_MODULE_6__.InstancedMesh(this._instancedBlockGeometry, material, _blocks__WEBPACK_IMPORTED_MODULE_5__.BlocksManager.maxBlocksPerChunk);
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block) {
+                instancedMesh.setMatrixAt(instanceIndex, block.matrix);
+            }
+            else {
+                instancedMesh.setMatrixAt(instanceIndex, _utils__WEBPACK_IMPORTED_MODULE_0__.dummy.matrix);
+            }
         });
         this.add(instancedMesh);
     }
-    _updateBlocksTypes() {
-        this.blocks.forEach((block, index) => {
-            if (block.btype === BlockType.None) {
-                let sibDistance = 1;
-                let noiseValue = _state__WEBPACK_IMPORTED_MODULE_1__.state.generator.getPerlin3DNoise({
-                    x: block.bx + (this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize),
-                    y: block.by + (this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize),
-                    iterations: 4
-                });
-                if (block.by < 2) {
-                    block.btype = BlockType.Rock;
-                }
-                else if (block.by < 3) {
-                    block.btype = BlockType.Gravel;
-                }
-                else if (block.by < 4) {
-                    block.btype = BlockType.Sand;
-                }
-                else {
-                    block.btype = BlockType.Dirt;
-                }
-            }
-        });
-    }
-    _updateBlocksShading() {
-        this.blocks.forEach((block, index) => {
-            let lightness = 1;
-            let sibDistance = 2;
-            block.iterateSiblings(sibDistance, (block, dx, dy, dz) => {
-                let shadingFactor = 0;
-                if (dy >= 1) {
-                    shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5);
-                    shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5);
-                    shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5);
-                    shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5);
-                    shadingFactor /= 4;
-                }
-                lightness *= (0,_utils__WEBPACK_IMPORTED_MODULE_0__.lerp)(1, 0.95, shadingFactor);
-            });
-            block.lightness = lightness;
-        });
-    }
     _updateInstancedAttributes() {
-        this.blocks.forEach((block, index) => {
-            this._instancedAttribute.setXYZ(block.instanceIndex, block.tileX, block.tileY, block.lightness);
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block) {
+                this._instancedAttribute.setXYZ(block.instanceIndex, block.tileX, block.tileY, block.lightness);
+            }
         });
         this._instancedAttribute.needsUpdate = true;
     }
-    update() {
-    }
-    isSameChunk(cx, cz) {
-        return cx === this.cx && cz === this.cz;
-    }
-    snooze() {
+    cancel() {
         if (this._buildTask) {
             this._buildTask.cancel();
             this._buildTask = null;
@@ -17674,7 +17858,7 @@ class VoxelWorldGenerator {
             const valueScale = 1 + Math.pow(2, i);
             val = (val + Math.abs((0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin3D)(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2;
         }
-        // val /= (iterations)
+        val /= (iterations / 2);
         return (0,lodash__WEBPACK_IMPORTED_MODULE_1__.clamp)(val, 0, 1);
     }
     getPerlin4DNoise({ x, y, z, iterations = 4 }) {
@@ -17684,7 +17868,7 @@ class VoxelWorldGenerator {
             const valueScale = 1 + Math.pow(2, i);
             val = (val + Math.abs((0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin4D)(x / stepScale, y / stepScale, z / stepScale, this.seed / stepScale) * valueScale)) / 2;
         }
-        val /= (Math.pow(iterations, 2));
+        val /= (iterations);
         return (0,lodash__WEBPACK_IMPORTED_MODULE_1__.clamp)(val, 0, 1);
     }
     getNoiseValue({ x, y, scale = 1, iterations = 2 }) {
@@ -17723,6 +17907,7 @@ __webpack_require__.r(__webpack_exports__);
 let _groundPlane = new three__WEBPACK_IMPORTED_MODULE_5__.Plane(new three__WEBPACK_IMPORTED_MODULE_5__.Vector3(0, 1, 0), 0);
 let _intersection = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3();
 let _raycaster = new three__WEBPACK_IMPORTED_MODULE_5__.Raycaster();
+const maxChunkAge = 3;
 function getCameraLookIntersection(camera) {
     // Create a Raycaster using the camera's current position and look direction
     _raycaster.setFromCamera(new three__WEBPACK_IMPORTED_MODULE_5__.Vector2(0, 0), camera); // (0,0) corresponds to center of screen
@@ -17737,12 +17922,14 @@ class VoxelMap extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
         super();
         this.camera = null;
         this.activeChunk = null;
+        this.chunks = {};
         this.camera = camera;
         this.activeChunk = [null, null];
         // GRID HELPER
         this.add(new three__WEBPACK_IMPORTED_MODULE_5__.GridHelper(5, 10, 0x888888, 0x444444));
         this._updateChunks = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.debounce)(this._updateChunks.bind(this), 250);
         this._trimOldChunks = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.debounce)(this._trimOldChunks.bind(this), 500);
+        this._updateBlocks = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.throttle)(this._updateBlocks.bind(this, 250));
     }
     update() {
         let cameraLook = getCameraLookIntersection(this.camera);
@@ -17756,12 +17943,13 @@ class VoxelMap extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
             this._updateChunks();
             this._trimOldChunks(_state__WEBPACK_IMPORTED_MODULE_1__.state.maxChunksInMemory);
         }
+        this._updateBlocks();
     }
     _updateChunks() {
         let cx = this.activeChunk[0];
         let cz = this.activeChunk[1];
-        for (let k in _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks) {
-            _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k].active = false;
+        for (let k in this.chunks) {
+            this.chunks[k].active = false;
         }
         for (let y = cz - _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks; y <= cz + _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks; y++) {
             for (let x = cx - _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks; x <= cx + _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks; x++) {
@@ -17769,38 +17957,40 @@ class VoxelMap extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
                 chunk.active = true;
             }
         }
-        for (let k in _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks) {
-            if (_state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k].active) {
-                // state.tasker.flush(['map', 'chunk-snooze', state.chunks[k].cid])
-                this.add(_state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k]);
+        for (let k in this.chunks) {
+            if (this.chunks[k].active) {
+                // state.tasker.flush(['map', 'chunk-snooze', this.chunks[k].cid])
+                this.add(this.chunks[k]);
             }
             else {
-                _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k].snooze();
+                this.chunks[k].cancel();
                 // state.tasker.add((done) => {
-                //     this.remove(state.chunks[k])
+                //     this.remove(this.chunks[k])
                 //     done()
-                // }, ['map', 'chunk-snooze', state.chunks[k].cid], QueueType.Normal, true)
-                this.remove(_state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k]);
+                // }, ['map', 'chunk-snooze', this.chunks[k].cid], QueueType.Normal, true)
+                this.remove(this.chunks[k]);
             }
         }
         this._updateBlocks();
     }
     _updateBlocks() {
-        for (let k in _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks) {
-            _state__WEBPACK_IMPORTED_MODULE_1__.state.tasker.add((done) => {
-                if (_state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k]) {
-                    _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[k].updateBlocks();
-                    done();
-                }
-            }, ['map', 'chunk', k, 'update-materials'], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Normal, true);
+        for (let k in this.chunks) {
+            if (this.chunks[k].age > maxChunkAge) {
+                _state__WEBPACK_IMPORTED_MODULE_1__.state.tasker.add((done) => {
+                    if (this.chunks[k]) {
+                        this.chunks[k].update();
+                        done();
+                    }
+                }, ['map', 'chunk', k, 'update-materials'], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Normal, true);
+            }
         }
     }
     _trimOldChunks(leftCount = 128) {
-        let sortedChunks = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.orderBy)((0,lodash__WEBPACK_IMPORTED_MODULE_3__.values)(_state__WEBPACK_IMPORTED_MODULE_1__.state.chunks), (chunk) => chunk.serial, 'desc');
+        let sortedChunks = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.orderBy)((0,lodash__WEBPACK_IMPORTED_MODULE_3__.values)(this.chunks), (chunk) => chunk.serial, 'desc');
         let chunksToRemove = sortedChunks.slice(leftCount);
         chunksToRemove.forEach((chunk) => {
             _state__WEBPACK_IMPORTED_MODULE_1__.state.tasker.flush(['chunk', chunk.cid]);
-            delete _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[chunk.cid];
+            delete this.chunks[chunk.cid];
             this.remove(chunk);
             chunk.kill();
         });
@@ -17810,15 +18000,15 @@ class VoxelMap extends three__WEBPACK_IMPORTED_MODULE_5__.Group {
     }
     _updateChunk(cx, cz) {
         let chunkId = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getChunkId)(cx, cz);
-        let chunk = _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[chunkId];
+        let chunk = this.chunks[chunkId];
         if (chunk === undefined) {
-            chunk = _state__WEBPACK_IMPORTED_MODULE_1__.state.chunks[chunkId] = new _chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk({
+            chunk = this.chunks[chunkId] = new _chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk({
                 cx,
                 cz
             });
         }
         else {
-            chunk.refresh();
+            chunk.update();
         }
         return chunk;
     }
@@ -17838,23 +18028,21 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   VoxelBlockMaterial: () => (/* binding */ VoxelBlockMaterial)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 
-
-let _textureLoader = new three__WEBPACK_IMPORTED_MODULE_1__.TextureLoader();
+let _textureLoader = new three__WEBPACK_IMPORTED_MODULE_0__.TextureLoader();
 let _tilemap = _textureLoader.load('assets/tiles.png');
 _tilemap.flipY = false;
-class VoxelBlockMaterial extends three__WEBPACK_IMPORTED_MODULE_1__.ShaderMaterial {
-    constructor({ color }) {
+class VoxelBlockMaterial extends three__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial {
+    constructor({ color, maxInstances, state }) {
         super({
             // Uniforms
             uniforms: {
-                uColor: { value: new three__WEBPACK_IMPORTED_MODULE_1__.Color(color) },
-                uLightDirection: { value: new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 10, 2).normalize() },
-                uFar: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.far },
-                uNear: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.near },
-                uMaxInstances: { value: _state__WEBPACK_IMPORTED_MODULE_0__.maxBlocksInChunk },
+                uColor: { value: new three__WEBPACK_IMPORTED_MODULE_0__.Color(color) },
+                uLightDirection: { value: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 10, 2).normalize() },
+                uFar: { value: state.camera.far },
+                uNear: { value: state.camera.near },
+                uMaxInstances: { value: maxInstances },
                 uTiles: { value: _tilemap },
                 uTileSize: { value: 1 / 16 }
             },
@@ -17937,34 +18125,26 @@ class VoxelBlockMaterial extends three__WEBPACK_IMPORTED_MODULE_1__.ShaderMateri
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   BlockShape: () => (/* binding */ BlockShape),
-/* harmony export */   maxBlocksInChunk: () => (/* binding */ maxBlocksInChunk),
 /* harmony export */   state: () => (/* binding */ state)
 /* harmony export */ });
-var BlockShape;
-(function (BlockShape) {
-    BlockShape[BlockShape["Cube"] = 0] = "Cube";
-    BlockShape[BlockShape["Prism6"] = 1] = "Prism6";
-})(BlockShape || (BlockShape = {}));
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+
 const state = {
     maxChunksInMemory: 256,
     seed: 1,
     chunkSize: 12,
     drawChunks: 2,
-    blockShape: BlockShape.Prism6,
-    worldHeight: 8,
+    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Prism6,
+    worldHeight: 12,
     camera: null,
     scene: null,
     renderer: null,
     controls: null,
     map: null,
     canvas: null,
-    chunks: {},
-    blocks: {},
     generator: null,
     tasker: null
 };
-const maxBlocksInChunk = state.chunkSize * state.chunkSize * state.worldHeight;
 
 
 /***/ }),
@@ -18146,13 +18326,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   clamp: () => (/* binding */ clamp),
 /* harmony export */   distance: () => (/* binding */ distance),
-/* harmony export */   getBlockId: () => (/* binding */ getBlockId),
+/* harmony export */   dummy: () => (/* binding */ dummy),
 /* harmony export */   getChunkId: () => (/* binding */ getChunkId),
 /* harmony export */   getNearestMultiple: () => (/* binding */ getNearestMultiple),
 /* harmony export */   getRandomHexColor: () => (/* binding */ getRandomHexColor),
 /* harmony export */   lerp: () => (/* binding */ lerp),
 /* harmony export */   logd: () => (/* binding */ logd)
 /* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+
 function getNearestMultiple(num, div = 1) {
     // Lower and upper multiples
     const lower = Math.floor(num / div) * div;
@@ -18172,15 +18354,16 @@ function logd(tag, ...args) {
 function getChunkId(cx, cz) {
     return `${cx}_${cz}`;
 }
-function getBlockId(bx, by, bz) {
-    return `${Math.round(bx)}_${Math.round(by)}_${Math.round(bz)}`;
-}
 function getRandomHexColor() {
     return Math.floor(Math.random() * 16777215);
 }
 function distance(ax, ay, bx, by) {
     return Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2));
 }
+const dummy = new three__WEBPACK_IMPORTED_MODULE_0__.Object3D();
+dummy.scale.setScalar(0.00000001);
+dummy.position.set(-9999999, -9999999, -9999999);
+dummy.updateMatrix();
 
 
 /***/ }),
