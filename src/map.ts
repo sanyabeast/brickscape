@@ -65,14 +65,15 @@ export class VoxelMap extends Group {
 
         for (let k in state.chunks) {
             if (state.chunks[k].active) {
-                state.tasker.flush(['map', 'chunk-snooze', state.chunks[k].cid])
+                // state.tasker.flush(['map', 'chunk-snooze', state.chunks[k].cid])
                 this.add(state.chunks[k])
             } else {
                 state.chunks[k].snooze()
-                state.tasker.add((done) => {
-                    this.remove(state.chunks[k])
-                    done()
-                }, ['map', 'chunk-snooze', state.chunks[k].cid], QueueType.Normal, true)
+                // state.tasker.add((done) => {
+                //     this.remove(state.chunks[k])
+                //     done()
+                // }, ['map', 'chunk-snooze', state.chunks[k].cid], QueueType.Normal, true)
+                this.remove(state.chunks[k])
             }
         }
 

@@ -3,9 +3,9 @@ import { Block, Chunk } from "./chunk"
 import { VoxelWorldGenerator } from "./generator"
 import { VoxelMapControls as VoxelWorldControls } from "./controls"
 import { Tasker } from "./tasker"
+import { VoxelMap } from "./map"
 
 interface IVoxelWorldState {
-    [x: string]: any
     blocks: {
         [x: string]: Block
     }
@@ -16,7 +16,9 @@ interface IVoxelWorldState {
     seed: number,
     chunkSize: number,
     drawChunks: number
+    blockShape: BlockShape
     worldHeight: number
+    map: VoxelMap
     controls: VoxelWorldControls
     canvas: HTMLCanvasElement
     camera: PerspectiveCamera
@@ -26,12 +28,18 @@ interface IVoxelWorldState {
     tasker: Tasker
 }
 
+export enum BlockShape {
+    Cube,
+    Prism6
+}
+
 export const state: IVoxelWorldState = {
     maxChunksInMemory: 512,
     seed: 543,
-    chunkSize: 8,
-    drawChunks: 4,
-    worldHeight: 16,
+    chunkSize: 16,
+    drawChunks: 2,
+    blockShape: BlockShape.Prism6,
+    worldHeight: 5,
     camera: null,
     scene: null,
     renderer: null,

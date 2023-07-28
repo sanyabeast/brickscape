@@ -1,6 +1,6 @@
-import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh, Object3D, InstancedBufferGeometry, InstancedBufferAttribute, TextureLoader } from "three"
+import { Group, Mesh, BoxGeometry, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, InstancedMesh, Object3D, InstancedBufferGeometry, InstancedBufferAttribute, TextureLoader, BufferGeometry, CylinderGeometry } from "three"
 import { getBlockId, getChunkId, getRandomHexColor, lerp } from "./utils"
-import { maxBlocksInChunk, state } from "./state"
+import { BlockShape, maxBlocksInChunk, state } from "./state"
 import { debounce, throttle } from "lodash"
 import { VoxelBlockMaterial } from "./shaders"
 import { QueueType, Task } from "./tasker"
@@ -36,6 +36,19 @@ const blockTypes = {
 
 export type FSiblingIteratee = (sibling: Block, dx: number, dy: number, dz: number) => void
 export class Block extends Object3D {
+    static getShapeGeometry(): InstancedBufferGeometry {
+        switch (state.blockShape) {
+            case BlockShape.Prism6: {
+                let g = new CylinderGeometry(1, 1, 1, 6) as any as InstancedBufferGeometry
+                g.scale(1 / 1.732, 1, 1 / 1.5);
+                return g;
+            }
+            default: {
+                return new BoxGeometry(1, 1, 1) as any as InstancedBufferGeometry
+            }
+        }
+    }
+
     bx: number = null
     by: number = null
     bz: number = null
@@ -63,7 +76,18 @@ export class Block extends Object3D {
 
         state.blocks[this.bid] = this
 
-        this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
+        switch (state.blockShape) {
+            case BlockShape.Prism6: {
+                if (z % 2 == 0) {
+                    x += 0.5
+                }
+                this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
+                break;
+            }
+            default: {
+                this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
+            }
+        }
         this.updateMatrix()
     }
 
@@ -126,14 +150,13 @@ export class Chunk extends Group {
 
     _initBlockGeometry() {
         if (this._instancedBlockGeometry === null) {
-            const instancedBlockGeometry = this._instancedBlockGeometry = new InstancedBufferGeometry().copy(new BoxGeometry(1, 1, 1) as any);
+            this._instancedBlockGeometry = new InstancedBufferGeometry().copy(Block.getShapeGeometry());
             let instanceIndices = new Float32Array(maxBlocksInChunk * 3 * 10)
-
             let attribute = this._instancedAttribute = new InstancedBufferAttribute(instanceIndices, 3);
             for (let i = 0; i < maxBlocksInChunk; i++) {
                 attribute.setXYZ(i, 0, 0, 1);
             }
-            instancedBlockGeometry.setAttribute('instanceData', attribute);
+            this._instancedBlockGeometry.setAttribute('instanceData', attribute);
         }
     }
 
@@ -252,7 +275,7 @@ export class Chunk extends Group {
             let sibDistance = 2
             block.iterateSiblings(sibDistance, (block, dx, dy, dz) => {
                 let shadingFactor = 0
-                if (dy >= 0) {
+                if (dy >= 1) {
                     shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5)
                     shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5)
                     shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5)
@@ -293,7 +316,11 @@ export class Chunk extends Group {
             this._buildTask.cancel()
             this._buildTask = null
         }
-        this._instancedBlockGeometry.dispose()
+        if (this._instancedBlockGeometry){
+            this._instancedBlockGeometry.dispose()
+            delete this._instancedBlockGeometry
+        }
+        
     }
 
     override toString() {
