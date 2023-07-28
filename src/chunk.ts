@@ -255,12 +255,11 @@ export class Chunk extends Group {
                     iterations: 4
                 })
 
-                if (block.by < state.worldHeight / 16) {
+                if (block.by < 2) {
                     block.btype = BlockType.Rock
-
-                } else if (block.by < state.worldHeight / 8) {
+                } else if (block.by < 3) {
                     block.btype = BlockType.Gravel
-                } else if (block.by < state.worldHeight / 4) {
+                } else if (block.by < 4) {
                     block.btype = BlockType.Sand
                 } else {
                     block.btype = BlockType.Dirt

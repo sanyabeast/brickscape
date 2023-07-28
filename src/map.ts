@@ -6,16 +6,19 @@ import { debounce, orderBy, sortBy, throttle, values } from "lodash";
 import { QueueType } from "./tasker";
 
 
+let _groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+let _intersection = new Vector3();
+let _raycaster = new Raycaster();
 export function getCameraLookIntersection(camera) {
     // Create a Raycaster using the camera's current position and look direction
-    let raycaster = new Raycaster();
-    raycaster.setFromCamera(new Vector2(0, 0), camera);  // (0,0) corresponds to center of screen
+    
+    _raycaster.setFromCamera(new Vector2(0, 0), camera);  // (0,0) corresponds to center of screen
     // Create a horizontal plane at y = 0
-    let groundPlane = new Plane(new Vector3(0, 1, 0), 0); // Upwards normal vector, 0 offset
+     // Upwards normal vector, 0 offset
     // Calculate intersection
-    let intersection = new Vector3();
-    raycaster.ray.intersectPlane(groundPlane, intersection);
-    return intersection;
+    
+    _raycaster.ray.intersectPlane(_groundPlane, _intersection);
+    return _intersection;
 }
 
 export class VoxelMap extends Group {

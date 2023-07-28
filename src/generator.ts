@@ -60,7 +60,7 @@ export class VoxelWorldGenerator {
             val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
         }
 
-        val /= (iterations - 2)
+        // val /= (iterations)
 
         return clamp(val, 0, 1)
     }
@@ -74,7 +74,7 @@ export class VoxelWorldGenerator {
             val = (val + Math.abs(perlin4D(x / stepScale, y / stepScale, z / stepScale, this.seed / stepScale) * valueScale)) / 2
         }
 
-        val /= iterations
+        val /= (Math.pow(iterations, 2))
 
         return clamp(val, 0, 1)
     }

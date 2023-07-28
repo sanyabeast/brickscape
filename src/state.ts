@@ -34,12 +34,12 @@ export enum BlockShape {
 }
 
 export const state: IVoxelWorldState = {
-    maxChunksInMemory: 512,
-    seed: 543,
-    chunkSize: 16,
+    maxChunksInMemory: 256,
+    seed: 1,
+    chunkSize: 12,
     drawChunks: 2,
     blockShape: BlockShape.Prism6,
-    worldHeight: 5,
+    worldHeight: 8,
     camera: null,
     scene: null,
     renderer: null,
