@@ -1,5 +1,5 @@
-import { InstancedBufferGeometry, Object3D } from "three";
-export type FSiblingIteratee = (sibling: Block, dx: number, dy: number, dz: number) => void;
+import { InstancedBufferGeometry } from "three";
+export type FSiblingIteratee = (dx: number, dy: number, dz: number, sibling: Block) => void;
 export declare enum BlockShape {
     Cube = 0,
     Prism6 = 1
@@ -15,17 +15,11 @@ export declare enum BlockType {
 }
 export interface IBlockTable {
     [x: string]: {
-        type: BlockType;
         tile: number[];
-        generate?: boolean;
-        levels?: number[];
-        rate?: number;
-        replace?: boolean;
-        order?: number;
     };
 }
 export declare const blockTable: IBlockTable;
-export declare class Block extends Object3D {
+export declare class Block {
     static getShapeGeometry(): InstancedBufferGeometry;
     bx: number;
     by: number;

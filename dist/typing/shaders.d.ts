@@ -1,10 +1,9 @@
-import { ShaderMaterial } from "three";
-export declare class VoxelBlockMaterial extends ShaderMaterial {
+import { MeshStandardMaterial } from "three";
+export declare class VoxelBlockStandardMaterial extends MeshStandardMaterial {
+    uniforms: any;
     constructor({ color, maxInstances, state }: {
         color: any;
         maxInstances: any;
         state: any;
     });
-    set color(v: any);
-    get color(): any;
 }

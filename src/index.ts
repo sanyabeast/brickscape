@@ -16,7 +16,7 @@ function main() {
     const pixelRatio = window.devicePixelRatio
     const fov = 89;
     const near = 0.1;
-    const far = 256;
+    const far = 2048;
     let aspect = 2;  // the canvas default
 
     const canvas = state.canvas = document.querySelector('#c');
@@ -40,6 +40,7 @@ function main() {
     controls.minDistance = 15;
     controls.maxDistance = 100;
     controls.maxPolarAngle = (Math.PI / 2.5);
+    controls.maxPolarAngle = (Math.PI);
     controls.enableDamping = true
     controls.dampingFactor = 0.01
     controls.panSpeed = 0.75
@@ -52,11 +53,17 @@ function main() {
     scene.add(map)
 
     // RENDER LOOP
+    let prevFrameTime = +new Date()
     function render() {
+        let now = +new Date()
+        let frameTimeDelta = now - prevFrameTime
+        let frameDelta = frameTimeDelta / (1000 / 60)
         requestAnimationFrame(render);
+        environment.update(frameDelta)
         map.update()
         controls.update()
         renderer.render(scene, camera);
+        prevFrameTime = now
 
     }
 

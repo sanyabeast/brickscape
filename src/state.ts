@@ -1,14 +1,12 @@
 import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
-import { Chunk } from "./chunk"
 import { VoxelWorldGenerator } from "./generator"
 import { VoxelMapControls as VoxelWorldControls } from "./controls"
 import { Tasker } from "./tasker"
 import { VoxelMap } from "./map"
 import { Block, BlockShape } from "./blocks"
+import { isMobileDevice } from "./utils"
 
 interface IVoxelWorldState {
-    
-    
     maxChunksInMemory: number
     seed: number,
     chunkSize: number,
@@ -26,12 +24,12 @@ interface IVoxelWorldState {
 }
 
 export const state: IVoxelWorldState = {
-    maxChunksInMemory: 256,
+    maxChunksInMemory: 512,
     seed: 1,
-    chunkSize: 12,
-    drawChunks: 2,
+    chunkSize: isMobileDevice() ? 8 : 10,
+    drawChunks: isMobileDevice() ? 1 : 3,
     blockShape: BlockShape.Prism6,
-    worldHeight: 12,
+    worldHeight: 10,
     camera: null,
     scene: null,
     renderer: null,

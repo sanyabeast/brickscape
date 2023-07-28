@@ -4,7 +4,7 @@ import { state } from "./state"
 const maxBlockAge = 2
 let _blocksCounter = 0
 
-export type FSiblingIteratee = (sibling: Block, dx: number, dy: number, dz: number) => void
+export type FSiblingIteratee = (dx: number, dy: number, dz: number, sibling: Block) => void
 
 export enum BlockShape {
     Cube,
@@ -51,7 +51,7 @@ export const blockTable: IBlockTable = {
     }
 }
 
-export class Block extends Object3D {
+export class Block {
     static getShapeGeometry(): InstancedBufferGeometry {
         switch (state.blockShape) {
             case BlockShape.Prism6: {
@@ -95,11 +95,8 @@ export class Block extends Object3D {
     constructor({ x, y, z, chunk, lightness, blockType }) {
 
         if (BlocksManager.getBlockAt(x, y, z)) {
-            return BlocksManager.getBlockAt(x, y, z)
+            // return BlocksManager.getBlockAt(x, y, z)
         }
-
-        // const material = new MeshBasicMaterial({ color: getRandomHexColor() });
-        super();
 
         this.bx = x;
         this.by = y;
@@ -111,18 +108,6 @@ export class Block extends Object3D {
 
         BlocksManager.blocks[this.bid] = this
 
-        switch (state.blockShape) {
-            case BlockShape.Prism6: {
-                if (z % 2 == 0) {
-                    x += 0.5
-                }
-                this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
-                break;
-            }
-            default: {
-                this.position.set(x - chunk.position.x, y - chunk.position.y, z - chunk.position.z)
-            }
-        }
 
         this.instanceIndex = BlocksManager.getInstanceIndex(
             x - chunk.position.x, y - chunk.position.y, z - chunk.position.z
@@ -130,7 +115,6 @@ export class Block extends Object3D {
 
         this.update({ lightness, blockType })
         this.lastUpdate = 0
-        this.updateMatrix()
     }
 
     kill() {
@@ -142,10 +126,7 @@ export class Block extends Object3D {
         for (let x = -distance; x <= distance; x++) {
             for (let y = -distance; y <= distance; y++) {
                 for (let z = -distance; z <= distance; z++) {
-                    let siblingBlock = BlocksManager.getBlockAt(x + this.bx, y + this.by, z + this.bz)
-                    if (siblingBlock) {
-                        iteratee(siblingBlock, x, y, z)
-                    }
+                    iteratee(x, y, z, BlocksManager.getBlockAt(x + this.bx, y + this.by, z + this.bz))
                 }
             }
         }

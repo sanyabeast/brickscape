@@ -2,12 +2,7 @@ import { Object3D } from "three";
 
 
 export function getNearestMultiple(num: number, div: number = 1) {
-    // Lower and upper multiples
-    const lower = Math.floor(num / div) * div;
-    const upper = Math.ceil(num / div) * div;
-
-    // Return the nearest one
-    return (num - lower < upper - num) ? lower : upper;
+    return Math.floor(num / div) * div
 }
 
 export function clamp(value: number, min: number, max: number): number {
@@ -35,7 +30,7 @@ export function distance(ax, ay, bx, by): number {
     return Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2))
 }
 
-export const dummy = new Object3D()
-dummy.scale.setScalar(0.00000001)
-dummy.position.set(-9999999, -9999999, -9999999)
-dummy.updateMatrix()
+export function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+

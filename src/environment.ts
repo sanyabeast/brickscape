@@ -1,29 +1,121 @@
-import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color } from "three";
+import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color, Light, Scene } from "three";
+import { Lensflare, LensflareElement } from "three/examples/jsm/objects/LensFlare"
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { rgbeLoader, textureLoader } from "./loaders";
+import { state } from "./state";
+import { clamp, lerp } from "./utils";
 
-const textureLoader = new TextureLoader();
-const rgbeLoader = new RGBELoader()
+interface IFlareData {
+    texture: string
+    size: number
+    distance: number
+    color: any
+}
+const flaresTable = [
+    {
+        texture: 'assets/flares/lensflare0.png',
+        size: 700,
+        distance: 0,
+        color: 0xFFFFFF,
+    },
+    {
+        texture: 'assets/flares/lensflare3.png',
+        size: 60,
+        distance: 0.6,
+        color: 0xFFFFFF,
+    },
+    {
+        texture: 'assets/flares/lensflare3.png',
+        size: 70,
+        distance: 0.7,
+        color: 0xFFFFFF,
+    },
+    {
+        texture: 'assets/flares/lensflare3.png',
+        size: 120,
+        distance: 0.9,
+        color: 0xFFFFFF,
+    },
+    {
+        texture: 'assets/flares/lensflare3.png',
+        size: 70,
+        distance: 1,
+        color: 0xFFFFFF,
+    }
+]
 
 export class Environment extends Group {
-    sun = null
+    sun: DirectionalLight = null
+    fog: FogExp2 = null
+    daytime: number = 0.9
+    dayspeed: number = 1 / 2048
+    sunRotationRadius: number = state.worldHeight * 32
+    sunElevation: number = 2
+    minSunIntensity: number = -0.5
+    maxSunIntensity: number = 0.5
+
+    minEnvIntensity: number = 0.01
+    maxEnvIntensity: number = 0.5
 
     constructor({ scene, camera, renderer }) {
         super()
+        scene.fog = new FogExp2(new Color(0x777777), 0.005)
 
-        // 
-        const ambient = new HemisphereLight(0xffff00, 0x0000ff)
-        scene.add(ambient)
+        let sun = this.sun = new DirectionalLight(0xfffeee, 1)
+        sun.position.set(0.5, 1, -0.5);
+        scene.add(sun)
+        Environment.addFlares(sun, scene)
+        // Create the lens flare object
 
-        scene.fog = new FogExp2(new Color(0x00ff00))
-
-        let envMap = rgbeLoader.load('assets/hdr/lenong.hdr', () => {
+        let envMap = rgbeLoader.load('assets/hdr/quarry.hdr', () => {
             envMap.mapping = EquirectangularReflectionMapping;
             envMap.colorSpace = SRGBColorSpace;
 
             scene.background = envMap;
             scene.environment = envMap;
-
+            scene.backgroundIntensity = 1
             scene.backgroundBlurriness = 1
         });
+
+        this.update(0)
+    }
+
+    update(frameDelta: number) {
+        let sunHeight = clamp(Math.sin(this.daytime * Math.PI * 2) + 0.5, -1, 1)
+        let backgroundIntensity = clamp(sunHeight + 0.1, 0, 1)
+
+        let angle = this.daytime * Math.PI * 2;
+        let sunX = Math.cos(angle) * this.sunRotationRadius;
+        let sunZ = Math.sin(angle) * this.sunRotationRadius;
+        this.sun.intensity = clamp(lerp(this.minSunIntensity, this.maxSunIntensity, clamp(sunHeight, 0, 1)), 0, 1)
+
+        this.sun.position.set(sunX, sunHeight * this.sunRotationRadius * this.sunElevation, sunZ);
+        (this.sun as any).flare.position.copy(this.sun.position);
+        (state.scene as any).backgroundIntensity = backgroundIntensity;
+
+
+        let envMapIntensity = lerp(this.minEnvIntensity, this.maxEnvIntensity, clamp(sunHeight, 0, 1))
+        state.scene.traverse((object: any) => {
+            if (object.isMesh) {
+                object.material.envMapIntensity = envMapIntensity
+            }
+        })
+
+        this.daytime += this.dayspeed * frameDelta
+    }
+
+    static addFlares(light: Light, scene: Scene, count: number = 5) {
+        const lensflare = new Lensflare();
+        flaresTable.forEach((flareData, index) => {
+            if (index < count) {
+                const lensFlareTexture = textureLoader.load(flareData.texture);
+                lensflare.addElement(new LensflareElement(lensFlareTexture, flareData.size, flareData.distance, new Color(0xffffff)));
+                // lensflare.position.copy(light.position);
+                console.log(lensflare)
+            }
+        })
+
+        scene.add(lensflare);
+        (light as any).flare = lensflare
     }
 }

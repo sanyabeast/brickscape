@@ -1,4 +1,4 @@
-import { Group, InstancedMesh, InstancedBufferGeometry, InstancedBufferAttribute } from "three";
+import { Group, InstancedMesh, InstancedBufferAttribute } from "three";
 import { Task } from "./tasker";
 import { Block } from "./blocks";
 export type FChunkGridIteratee = (x: number, y: number, z: number, instanceIndex: number, block?: Block) => void;
@@ -13,8 +13,8 @@ export declare class Chunk extends Group {
     instanced: InstancedMesh[];
     _buildTask: Task;
     _built: boolean;
-    _instancedBlockGeometry: InstancedBufferGeometry;
-    _instancedAttribute: InstancedBufferAttribute;
+    _instanceDataAttribute: InstancedBufferAttribute;
+    _instanceVisibilityAttribute: InstancedBufferAttribute;
     _instancedMesh: InstancedMesh;
     _noiseTable: {
         [x: string]: number;
@@ -25,7 +25,7 @@ export declare class Chunk extends Group {
         cx: any;
         cz: any;
     });
-    _initBlockGeometry(): void;
+    _initInstancedMesh(): void;
     update(): void;
     updateChunk(): void;
     _getOutdatedBlocksCount(): number;
@@ -35,9 +35,8 @@ export declare class Chunk extends Group {
     _updateBlocksShading(): boolean;
     _iterateChunkGrid(iteratee: FChunkGridIteratee): void;
     _iterateChunkGridXZ(iteratee: FChunkGridIterateeXZ): void;
-    _generateInstancedMeshes(): void;
     _updateInstancedAttributes(): void;
-    cancel(): void;
     kill(): void;
+    cancel(): void;
     toString(): string;
 }

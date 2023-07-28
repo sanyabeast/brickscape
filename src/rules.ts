@@ -11,27 +11,37 @@ export enum BlockReplaceStrategy {
     OnlyReplace
 }
 
-export interface BlockPlacement {
+export interface IBlockPlacement {
     blockType: BlockType
     placement: number[]
 }
 
-export interface IGenerationRule {
+export interface IBlocksGenerationRule {
     replace: BlockReplaceStrategy
-    structure: BlockPlacement[]
+    structure: IBlockPlacement[]
+    create: IBlockCreationRule[]
 }
 
-function getSingleBlockStructure(blockType: BlockType): BlockPlacement[] {
+export interface IBlockCreationRule {
+
+}
+
+function getSingleBlockStructure(blockType: BlockType): IBlockPlacement[] {
     return [{
         blockType,
         placement: [0, 0]
     }]
 }
 
-export const rules: IGenerationRule[] = [
+export const rules: IBlocksGenerationRule[] = [
     // filler
     {
         replace: BlockReplaceStrategy.Replace,
-        structure: getSingleBlockStructure(BlockType.None)
+        structure: getSingleBlockStructure(BlockType.None),
+        create: [
+            {
+                
+            }
+        ]
     }
 ]
