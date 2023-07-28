@@ -13,7 +13,7 @@ module.exports = {
     },
     devServer: {
         static: {
-            directory: path.join(__dirname, 'dist'), // Tells the server where to serve content from
+            directory: path.join(__dirname, 'static'), // Tells the server where to serve content from
         },
         devMiddleware: {
             publicPath: '/', // The public path that the middleware serves, necessary for HMR
@@ -45,7 +45,8 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin({
             patterns: [
-                { from: 'assets', to: 'assets' }
+                { from: 'assets', to: 'assets' },
+                { from: 'static', to: '' }
             ]
         })
     ]
