@@ -1,3 +1,4 @@
+import { Object3D } from "three";
 
 
 export function getNearestMultiple(num: number, div: number = 1) {
@@ -37,3 +38,8 @@ export function getRandomHexColor() {
 export function distance(ax, ay, bx, by): number {
     return Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2))
 }
+
+export const dummy = new Object3D()
+dummy.scale.setScalar(0.00000001)
+dummy.position.set(-9999999, -9999999, -9999999)
+dummy.updateMatrix()

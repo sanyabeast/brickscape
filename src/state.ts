@@ -4,6 +4,7 @@ import { VoxelWorldGenerator } from "./generator"
 import { VoxelMapControls as VoxelWorldControls } from "./controls"
 import { Tasker } from "./tasker"
 import { VoxelMap } from "./map"
+import { getBlockId } from "./utils"
 
 interface IVoxelWorldState {
     blocks: {
@@ -39,7 +40,7 @@ export const state: IVoxelWorldState = {
     chunkSize: 12,
     drawChunks: 2,
     blockShape: BlockShape.Prism6,
-    worldHeight: 8,
+    worldHeight: 12,
     camera: null,
     scene: null,
     renderer: null,
@@ -51,5 +52,37 @@ export const state: IVoxelWorldState = {
     generator: null,
     tasker: null
 }
+
+class BlocksManager {
+    getMostElevatedBlockAt(x: number, z: number): Block {
+        let r: Block = null
+
+        for (let i = 0; i < state.worldHeight; i++) {
+            let b = state.blocks[getBlockId(x, i, z)]
+            if (b) {
+                r = b
+            }
+        }
+
+        return r
+    }
+    getElevationAt(x: number, z: number): number {
+        let r: number = 0
+
+        for (let i = 0; i < state.worldHeight; i++) {
+            let b = state.blocks[getBlockId(x, i, z)]
+            if (b) {
+                r = i
+            }
+        }
+
+        return r
+    }
+    getBlockAt(x: number, y: number, z: number): Block {
+        return state.blocks[getBlockId(x, y, z)]
+    }
+}
+
+export const blocksHelper = new BlocksManager()
 
 export const maxBlocksInChunk = state.chunkSize * state.chunkSize * state.worldHeight;
