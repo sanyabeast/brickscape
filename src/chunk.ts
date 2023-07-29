@@ -4,13 +4,10 @@ import { state } from "./state"
 import { debounce, throttle } from "lodash"
 import { VoxelBlockStandardMaterial } from "./shaders"
 import { QueueType, Task } from "./tasker"
-import { Block, BlockShape, BlockType, BlocksManager } from "./blocks"
+import { Block, BlockShape, BlockType, BlockManager } from "./blocks"
 
 
 let _chunksCounter = 0;
-
-export type FChunkGridIteratee = (x: number, y: number, z: number, instanceIndex: number, block?: Block) => void
-export type FChunkGridIterateeXZ = (x: number, z: number) => void
 
 
 let _instancedMesh = null
@@ -20,15 +17,15 @@ let _blockMaterial: Material = null
 function _createInstancedMesh(): InstancedMesh {
     if (_instancedMesh === null) {
         const _instancedBlockGeometry = new InstancedBufferGeometry().copy(Block.getShapeGeometry());
-        const _instanceDataArray = new Float32Array(BlocksManager.maxBlocksPerChunk * 3)
+        const _instanceDataArray = new Float32Array(BlockManager.maxBlocksPerChunk * 3)
         const _instanceDataAttribute = new InstancedBufferAttribute(_instanceDataArray, 3);
 
-        const _instanceVisibilityArray = new Float32Array(BlocksManager.maxBlocksPerChunk)
+        const _instanceVisibilityArray = new Float32Array(BlockManager.maxBlocksPerChunk)
         const _instanceVisibilityAttribute = new InstancedBufferAttribute(_instanceVisibilityArray, 1);
 
-        _blockMaterial = _blockMaterial || new VoxelBlockStandardMaterial({ color: 0xFFFFFF, maxInstances: BlocksManager.maxBlocksPerChunk, state })
+        _blockMaterial = _blockMaterial || new VoxelBlockStandardMaterial({ color: 0xFFFFFF, maxInstances: BlockManager.maxBlocksPerChunk, state })
 
-        for (let i = 0; i < BlocksManager.maxBlocksPerChunk; i++) {
+        for (let i = 0; i < BlockManager.maxBlocksPerChunk; i++) {
             _instanceDataAttribute.setXYZ(i, 0, 0, 1);
             _instanceVisibilityAttribute.setX(i, 0)
         }
@@ -36,7 +33,7 @@ function _createInstancedMesh(): InstancedMesh {
         _instancedBlockGeometry.setAttribute('instanceData', _instanceDataAttribute);
         _instancedBlockGeometry.setAttribute('instanceVisibility', _instanceVisibilityAttribute);
 
-        _instancedMesh = new InstancedMesh(_instancedBlockGeometry, _blockMaterial, BlocksManager.maxBlocksPerChunk);
+        _instancedMesh = new InstancedMesh(_instancedBlockGeometry, _blockMaterial, BlockManager.maxBlocksPerChunk);
 
         for (let x = 0; x < state.chunkSize; x++) {
             for (let z = 0; z < state.chunkSize; z++) {
@@ -57,7 +54,7 @@ function _createInstancedMesh(): InstancedMesh {
                         }
                     }
                     dummy.updateMatrix()
-                    _instancedMesh.setMatrixAt(BlocksManager.getInstanceIndex(x, y, z), dummy.matrix)
+                    _instancedMesh.setMatrixAt(BlockManager.getInstanceIndex(x, y, z), dummy.matrix)
                 }
             }
         }
@@ -150,43 +147,6 @@ export class Chunk extends Group {
 
     }
 
-    updateChunk() {
-        // console.log(`updating blocks at ${this.toString()}...`)
-        if (this._built) {
-            let outdatetBlocksCount = this._getOutdatedBlocksCount();
-
-            if (outdatetBlocksCount > 0) {
-                let shadingChanged = this._updateBlocksShading()
-                let blockTypesChanged = this._updateBlocksTypes();
-
-                if (shadingChanged || blockTypesChanged) {
-                    this._updateInstancedAttributes()
-                } else {
-                    // console.log(`chunk have not changed since last update`)
-                }
-
-                this.lastUpdate = +new Date()
-            } else {
-                // console.log(`no outdated blocks`)
-            }
-        }
-    }
-
-    _getOutdatedBlocksCount(): number {
-        let i = 0;
-        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
-            if (block && block.isOutdated) {
-                i++
-            }
-        })
-        return i
-    }
-
-    _updateChunkMatrix() {
-        this._instancedMesh.instanceMatrix.needsUpdate = true
-        this.updateMatrix()
-    }
-
     _buildChunk() {
         // bedrock level
         this._iterateChunkGridXZ((x, z) => {
@@ -228,7 +188,7 @@ export class Chunk extends Group {
         let waterLevel = 2
 
         this._iterateChunkGridXZ((x, z) => {
-            let existingBlock = BlocksManager.getBlockAt(x, waterLevel, z)
+            let existingBlock = BlockManager.getBlockAt(x, waterLevel, z)
             if (!existingBlock) {
                 new Block({
                     chunk: this,
@@ -242,6 +202,52 @@ export class Chunk extends Group {
         })
     }
 
+    updateChunk() {
+        // console.log(`updating blocks at ${this.toString()}...`)
+        if (this._built) {
+            let outdatetBlocksCount = this._getOutdatedBlocksCount();
+
+            if (outdatetBlocksCount > 0) {
+                let shadingChanged = this._updateBlocksShading()
+                let blockTypesChanged = this._updateBlocksTypes();
+
+                if (shadingChanged || blockTypesChanged) {
+                    this._updateInstancedAttributes()
+                } else {
+                    // console.log(`chunk have not changed since last update`)
+                }
+
+                this._markBlocksUpdated()
+
+                this.lastUpdate = +new Date()
+            } else {
+                // console.log(`no outdated blocks`)
+            }
+        }
+    }
+
+    _getOutdatedBlocksCount(): number {
+        let i = 0;
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block && block.needsUpdate) {
+                i++
+            }
+        })
+        return i
+    }
+
+    _markBlocksUpdated(): void {
+        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
+            if (block) {
+                block.needsUpdate = false
+            }
+        })
+    }
+
+    _updateChunkMatrix() {
+        this._instancedMesh.instanceMatrix.needsUpdate = true
+        this.updateMatrix()
+    }
 
     _updateBlocksTypes(): boolean {
         let changed = false
@@ -300,23 +306,6 @@ export class Chunk extends Group {
         return changed
     }
 
-    _iterateChunkGrid(iteratee: FChunkGridIteratee) {
-        for (let z = 0; z < state.chunkSize; z++) {
-            for (let x = 0; x < state.chunkSize; x++) {
-                for (let y = 0; y < state.worldHeight; y++) {
-                    iteratee(x + (this.cx * state.chunkSize), y, z + (this.cz * state.chunkSize), BlocksManager.getInstanceIndex(x, y, z), BlocksManager.getBlockAt(x + (this.cx * state.chunkSize), y, z + (this.cz * state.chunkSize)))
-                }
-            }
-        }
-    }
-
-    _iterateChunkGridXZ(iteratee: FChunkGridIterateeXZ) {
-        for (let z = 0; z < state.chunkSize; z++) {
-            for (let x = 0; x < state.chunkSize; x++) {
-                iteratee(x + (this.cx * state.chunkSize), z + (this.cz * state.chunkSize))
-            }
-        }
-    }
 
     _updateInstancedAttributes() {
         this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
@@ -331,6 +320,14 @@ export class Chunk extends Group {
         this._instanceDataAttribute.needsUpdate = true
     }
 
+
+    _iterateChunkGrid(iteratee) {
+        BlockManager.iterateGrid(this.cx * state.chunkSize, 0, this.cz * state.chunkSize, this.cx * state.chunkSize + state.chunkSize, 0, this.cz * state.chunkSize + state.chunkSize, iteratee)
+    }
+
+    _iterateChunkGridXZ(iteratee) {
+        BlockManager.iterateGridXZ(this.cx * state.chunkSize, this.cz * state.chunkSize, this.cx * state.chunkSize + state.chunkSize, this.cz * state.chunkSize + state.chunkSize, iteratee)
+    }
 
     kill() {
         this.cancel()

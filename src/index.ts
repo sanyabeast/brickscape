@@ -1,6 +1,6 @@
 import { PerspectiveCamera, WebGLRenderer, Scene } from 'three';
 import { VoxelMapControls } from './controls';
-import { VoxelMap } from './map';
+import { WorldManager } from './world';
 import { createGui } from './gui';
 import { state } from './state'
 import { Environment } from './environment';
@@ -46,7 +46,7 @@ function main() {
     controls.panSpeed = 0.75
 
     // MAP
-    const map = state.map = new VoxelMap({
+    const map = state.map = new WorldManager({
         camera
     })
 
