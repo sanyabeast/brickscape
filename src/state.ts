@@ -41,7 +41,7 @@ export const state: IAppState = {
     seed: 1,
     chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
-    blockShape: BlockShape.Prism6,
+    blockShape: BlockShape.Cube,
     worldHeight: 12,
     camera: null,
     scene: null,

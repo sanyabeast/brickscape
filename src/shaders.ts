@@ -2,12 +2,19 @@ import { ShaderMaterial, Color, Vector3, TextureLoader, MeshStandardMaterial, Me
 import { FeatureLevel, featureLevel, state } from "./state";
 import { blockManager } from "./blocks";
 
+// Texture loader for loading the tilemap texture
 let _textureLoader = new TextureLoader()
 let _tilemap = _textureLoader.load('assets/tiles.png')
 _tilemap.flipY = false
 
+/**
+ * Patch the material with custom shaders and uniforms.
+ * @param {ShaderMaterial} mat - The material to be patched.
+ * @param {string[]} hooks - Array of strings representing hooks in the shader code.
+ */
 function _patchMaterial(mat, hooks: string[]) {
 
+  // Define the custom uniforms
   mat.uniforms = {
     uLightDirection: { value: new Vector3(0, 10, 2).normalize() },
     uFar: { value: state.camera.far },
@@ -19,6 +26,7 @@ function _patchMaterial(mat, hooks: string[]) {
 
   // Assign the vertex shader and fragment shader through onBeforeCompile
   mat.onBeforeCompile = (shader) => {
+    // Pass the custom uniforms to the shader
     shader.uniforms.uLightDirection = mat.uniforms.uLightDirection;
     shader.uniforms.uFar = mat.uniforms.uFar;
     shader.uniforms.uNear = mat.uniforms.uNear;
@@ -29,6 +37,7 @@ function _patchMaterial(mat, hooks: string[]) {
     console.log(shader.vertexShader)
     console.log(shader.fragmentShader)
 
+    // Replace hooks in the vertex shader with custom code
     shader.vertexShader = shader.vertexShader.replace(hooks[0], `
         attribute vec3 instanceData;
         attribute float instanceVisibility;
@@ -54,12 +63,9 @@ function _patchMaterial(mat, hooks: string[]) {
         vPosition = position.xyz;
         vInstanceData = instanceData;
         vInstanceVisibility = instanceVisibility;
-
-        // mvPosition = modelViewMatrix * instanceMatrix * vec4(position,1.0);
-        // gl_Position = projectionMatrix * mvPosition;
       `)
 
-
+    // Replace hooks in the fragment shader with custom code
     shader.fragmentShader = shader.fragmentShader.replace(hooks[3], `
         uniform vec3 uColor;
         uniform vec3 uLightDirection;
@@ -74,7 +80,6 @@ function _patchMaterial(mat, hooks: string[]) {
         varying vec3 vWorldPosition;
         varying vec3 vInstanceData;
         varying float vInstanceVisibility;
-
       `)
 
     shader.fragmentShader = shader.fragmentShader.replace(hooks[4], `
@@ -89,7 +94,6 @@ function _patchMaterial(mat, hooks: string[]) {
 
         // Use linear depth to fade objects in the distance
         diffuseColor.rgb *= tileColor.xyz;
-        //diffuseColor.rgb *= vInstanceData.z;
       `)
 
     shader.fragmentShader = shader.fragmentShader.replace(hooks[6], `
@@ -103,13 +107,12 @@ function _patchMaterial(mat, hooks: string[]) {
         totalDiffuse *= pow(vInstanceData.z, 1.);
         totalSpecular *= pow(vInstanceData.z, 1.);
       `)
-
-    // Ensure you define the varying variables here, which are used in both vertex and fragment shaders
-    // e.g., shader.vertexShader = `varying vec2 vUv;` + shader.vertexShader;
-    //       shader.fragmentShader = `varying vec2 vUv;` + shader.fragmentShader;
   };
 }
 
+/**
+ * Represents a custom material based on MeshStandardMaterial with voxel rendering capabilities.
+ */
 export class VoxelBlockStandardMaterial extends MeshStandardMaterial {
   uniforms = null
   constructor() {
@@ -121,6 +124,7 @@ export class VoxelBlockStandardMaterial extends MeshStandardMaterial {
       flatShading: true
     });
 
+    // Patch the material with custom shaders and uniforms
     _patchMaterial(this, [
       '#define STANDARD',
       '#include <uv_vertex>',
@@ -135,6 +139,9 @@ export class VoxelBlockStandardMaterial extends MeshStandardMaterial {
 
 }
 
+/**
+ * Represents a custom material based on MeshLambertMaterial with voxel rendering capabilities.
+ */
 export class VoxelBlockLamberMaterial extends MeshLambertMaterial {
   uniforms = null
   constructor() {
@@ -142,6 +149,7 @@ export class VoxelBlockLamberMaterial extends MeshLambertMaterial {
       flatShading: true
     });
 
+    // Patch the material with custom shaders and uniforms
     _patchMaterial(this, [
       '#define LAMBERT',
       '#include <uv_vertex>',
@@ -155,6 +163,9 @@ export class VoxelBlockLamberMaterial extends MeshLambertMaterial {
   }
 }
 
+/**
+ * Represents a custom material based on MeshLambertMaterial with voxel rendering capabilities.
+ */
 export class VoxelBlockPhongMaterial extends MeshLambertMaterial {
   uniforms = null
   constructor() {
@@ -162,6 +173,7 @@ export class VoxelBlockPhongMaterial extends MeshLambertMaterial {
       flatShading: true
     });
 
+    // Patch the material with custom shaders and uniforms
     _patchMaterial(this, [
       '#define LAMBERT',
       '#include <uv_vertex>',
@@ -175,6 +187,11 @@ export class VoxelBlockPhongMaterial extends MeshLambertMaterial {
   }
 }
 
+/**
+ * Get the base material for rendering voxel blocks based on the current feature level.
+ * @returns {Material} - The base material.
+ */
 export function getBlockBaseMaterial(): Material {
+  // Return either VoxelBlockLamberMaterial or VoxelBlockStandardMaterial based on the feature level
   return featureLevel === FeatureLevel.Low ? new VoxelBlockLamberMaterial() : new VoxelBlockStandardMaterial()
 }

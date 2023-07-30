@@ -17472,15 +17472,30 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// Pool of chunk objects for reusability
 const _chunkPool = [];
-const _chunkPoolLimit = 128;
+// Maximum size limit of the chunk pool
+const _chunkPoolLimit = 100;
+/**
+ * Represents a single chunk in the world.
+ */
 class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
+    /**
+     * The x-coordinate of the first block in the chunk.
+     */
     get bx0() {
         return this.cx * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
     }
+    /**
+     * The z-coordinate of the first block in the chunk.
+     */
     get bz0() {
         return this.cz * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
     }
+    /**
+     * Create a new Chunk object.
+     * @param {Object} options - Options object containing the x and z coordinates of the chunk.
+     */
     constructor({ cx, cz }) {
         (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk', `new [${cx}, ${cz}]}`);
         super();
@@ -17495,21 +17510,29 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
         this.serial = Chunk._chunksCounter;
         Chunk._chunksCounter++;
         this.matrixAutoUpdate = false;
-        // instanced mesh
+        // Create instanced mesh for rendering blocks
         this._instancedMesh = Chunk._createInstancedMesh();
         this._instanceDataAttribute = this._instancedMesh.geometry.attributes['instanceData'];
         this._instanceVisibilityAttribute = this._instancedMesh.geometry.attributes['instanceVisibility'];
         this.add(this._instancedMesh);
+        // Create grid helper for visual debugging
         this._gridHelper = new three__WEBPACK_IMPORTED_MODULE_7__.GridHelper(_state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize, 0x999999, 0x999999);
         this._gridHelper.position.set(_state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize / 2 - 0.5, 0, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize / 2 - 0.5);
         this.add(this._gridHelper);
         this.setup(cx, cz);
         this._updateGeometry = (0,lodash__WEBPACK_IMPORTED_MODULE_6__.debounce)(this._updateGeometry.bind(this), 1000);
     }
+    /**
+     * Synchronize the chunk with the world.
+     */
     sync() {
         (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk.sync', this.toString());
         this._updateGeometry(true);
     }
+    /**
+     * Update the geometry of the chunk.
+     * @param {boolean} updateAttrs - Whether to update the attributes.
+     */
     _updateGeometry(updateAttrs = false) {
         if (updateAttrs) {
             (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk._updateGeometry', `updating attributes at [${this.cx}, ${this.cz}]`);
@@ -17532,14 +17555,29 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
         this._instancedMesh.instanceMatrix.needsUpdate = true;
         this.updateMatrix();
     }
+    /**
+     * Compute the instance index based on the block coordinates.
+     * @param {number} x - The x-coordinate of the block.
+     * @param {number} y - The y-coordinate of the block.
+     * @param {number} z - The z-coordinate of the block.
+     * @returns {number} - The computed instance index.
+     */
     _computedInstanceIndex(x, y, z) {
         return Chunk.computedInstanceIndex(this.bx0, this.bz0, x, y, z);
     }
+    /**
+     * Deallocate resources and clean up the chunk.
+     */
     kill() {
         if (this._instancedMesh) {
             this._instancedMesh.geometry.dispose();
         }
     }
+    /**
+     * Set up the chunk at the specified coordinates.
+     * @param {number} cx - The x-coordinate of the chunk.
+     * @param {number} cz - The z-coordinate of the chunk.
+     */
     setup(cx, cz) {
         let isWorldReady = _world__WEBPACK_IMPORTED_MODULE_4__.worldManager.checkChunkGeneration(cx, cz);
         this.cx = cx;
@@ -17552,12 +17590,31 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
             this._updateGeometry(true);
         }
     }
+    /**
+     * Get a string representation of the chunk.
+     * @returns {string} - A string representation of the chunk.
+     */
     toString() {
         return `Chunk(cx=${this.cx}, cz=${this.cz})`;
     }
+    /**
+     * Compute the instance index based on the block coordinates.
+     * @param {number} bx0 - The x-coordinate of the first block in the chunk.
+     * @param {number} bz0 - The z-coordinate of the first block in the chunk.
+     * @param {number} x - The x-coordinate of the block.
+     * @param {number} y - The y-coordinate of the block.
+     * @param {number} z - The z-coordinate of the block.
+     * @returns {number} - The computed instance index.
+     */
     static computedInstanceIndex(bx0, bz0, x, y, z) {
         return Math.floor((x - bx0) + _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize * (y + _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight * (z - bz0)));
     }
+    /**
+     * Load a chunk with the specified coordinates.
+     * @param {number} cx - The x-coordinate of the chunk.
+     * @param {number} cz - The z-coordinate of the chunk.
+     * @returns {Chunk} - The loaded chunk object.
+     */
     static load(cx, cz) {
         let chunk = _chunkPool.pop();
         if (chunk === undefined) {
@@ -17568,30 +17625,44 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
             chunk.setup(cx, cz);
             (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk:load', `loading from pool ${chunk.toString()}`);
         }
+        chunk.visible = true;
         _gui__WEBPACK_IMPORTED_MODULE_5__.monitoringData.chunksPoolSize = _chunkPool.length.toString();
         return chunk;
     }
+    /**
+     * Unload a chunk and return it to the chunk pool.
+     * @param {Chunk} chunk - The chunk object to unload.
+     */
     static unload(chunk) {
         if (_chunkPool.length < _chunkPoolLimit) {
             (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk:unload', `unloading to pool ${chunk.toString()}`);
             _chunkPool.push(chunk);
         }
+        chunk.visible = true;
         _gui__WEBPACK_IMPORTED_MODULE_5__.monitoringData.chunksPoolSize = _chunkPool.length.toString();
     }
+    /**
+     * Create the base instanced mesh for rendering blocks.
+     * @returns {InstancedMesh} - The instanced mesh.
+     */
     static _createInstancedMesh() {
         if (Chunk._baseInstancedMesh === null) {
+            // Create base instanced block geometry and attributes
             const _instancedBlockGeometry = new three__WEBPACK_IMPORTED_MODULE_7__.InstancedBufferGeometry().copy(_blocks__WEBPACK_IMPORTED_MODULE_3__.Block.getShapeGeometry());
             const _instanceDataArray = new Float32Array(_blocks__WEBPACK_IMPORTED_MODULE_3__.blockManager.maxBlocksPerChunk * 3);
             const _instanceDataAttribute = new three__WEBPACK_IMPORTED_MODULE_7__.InstancedBufferAttribute(_instanceDataArray, 3);
             const _instanceVisibilityArray = new Float32Array(_blocks__WEBPACK_IMPORTED_MODULE_3__.blockManager.maxBlocksPerChunk);
             const _instanceVisibilityAttribute = new three__WEBPACK_IMPORTED_MODULE_7__.InstancedBufferAttribute(_instanceVisibilityArray, 1);
+            // Get the base block material
             Chunk._baseBlockMaterial = Chunk._baseBlockMaterial || (0,_shaders__WEBPACK_IMPORTED_MODULE_2__.getBlockBaseMaterial)();
             for (let i = 0; i < _blocks__WEBPACK_IMPORTED_MODULE_3__.blockManager.maxBlocksPerChunk; i++) {
                 _instanceDataAttribute.setXYZ(i, 0, 0, 1);
                 _instanceVisibilityAttribute.setX(i, 0);
             }
+            // Set instance attributes to the instanced geometry
             _instancedBlockGeometry.setAttribute('instanceData', _instanceDataAttribute);
             _instancedBlockGeometry.setAttribute('instanceVisibility', _instanceVisibilityAttribute);
+            // Create the base instanced mesh
             Chunk._baseInstancedMesh = new three__WEBPACK_IMPORTED_MODULE_7__.InstancedMesh(_instancedBlockGeometry, Chunk._baseBlockMaterial, _blocks__WEBPACK_IMPORTED_MODULE_3__.blockManager.maxBlocksPerChunk);
             for (let x = 0; x < _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize; x++) {
                 for (let z = 0; z < _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize; z++) {
@@ -17620,6 +17691,7 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
             return Chunk._createInstancedMesh();
         }
         else {
+            // Clone the base instanced mesh
             let clonedInstancedMesh = Chunk._baseInstancedMesh.clone();
             clonedInstancedMesh.geometry = Chunk._baseInstancedMesh.geometry.clone();
             clonedInstancedMesh.matrixAutoUpdate = false;
@@ -17967,17 +18039,34 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// Define a plane representing the ground in the scene
 let _groundPlane = new three__WEBPACK_IMPORTED_MODULE_6__.Plane(new three__WEBPACK_IMPORTED_MODULE_6__.Vector3(0, 1, 0), 0);
+// Vector to store the intersection point of the ray and the ground plane
 let _intersection = new three__WEBPACK_IMPORTED_MODULE_6__.Vector3();
+// Create a raycaster for detecting intersections with the ground plane
 let _raycaster = new three__WEBPACK_IMPORTED_MODULE_6__.Raycaster();
-let _chunkUpdateRateLimit = (_state__WEBPACK_IMPORTED_MODULE_1__.FeatureLevel.Low + 1) * 10;
-let _chunkSyncRateLimit = (_state__WEBPACK_IMPORTED_MODULE_1__.FeatureLevel.Low + 1) * 10;
+// Chunk update rate limit in milliseconds
+let _chunkUpdateRateLimit = (_state__WEBPACK_IMPORTED_MODULE_1__.FeatureLevel.Low + 1) * 5;
+// Chunk sync rate limit in milliseconds
+let _chunkSyncRateLimit = (_state__WEBPACK_IMPORTED_MODULE_1__.FeatureLevel.Low + 1) * 15;
+/**
+ * Get the intersection point of the camera's look direction with the ground plane.
+ * @param {Camera} camera - The camera object to use for raycasting.
+ * @returns {Vector3} - The intersection point of the ray and the ground plane.
+ */
 function getCameraLookIntersection(camera) {
     _raycaster.setFromCamera(new three__WEBPACK_IMPORTED_MODULE_6__.Vector2(0, 0), camera);
     _raycaster.ray.intersectPlane(_groundPlane, _intersection);
     return _intersection;
 }
+/**
+ * A custom Group class representing the Map Manager which handles loading and unloading of chunks.
+ */
 class MapManager extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
+    /**
+     * Create a new Map Manager.
+     * @param {Object} options - Options object containing the camera reference.
+     */
     constructor({ camera }) {
         super();
         this.camera = null;
@@ -17985,9 +18074,15 @@ class MapManager extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
         this.camera = camera;
         this.activeChunk = [null, null];
         this._activeChunks = [];
-        this._onActiveChunkChanged = (0,lodash__WEBPACK_IMPORTED_MODULE_5__.debounce)(this._onActiveChunkChanged.bind(this), 1000 / _chunkUpdateRateLimit);
+        // Debounced function to handle the change of active chunk
+        this._onActiveChunkChanged = (0,lodash__WEBPACK_IMPORTED_MODULE_5__.throttle)(this._onActiveChunkChanged.bind(this), 1000 / _chunkUpdateRateLimit);
+        // Throttled function to sync the chunks
         this._syncChunks = (0,lodash__WEBPACK_IMPORTED_MODULE_5__.throttle)(this._syncChunks.bind(this), 1000 / _chunkSyncRateLimit);
     }
+    /**
+     * Update the Map Manager.
+     * This function should be called in the update/render loop to update the manager.
+     */
     update() {
         let cameraLook = getCameraLookIntersection(this.camera);
         let cx = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getNearestMultiple)(cameraLook.x, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) / _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
@@ -18002,6 +18097,10 @@ class MapManager extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
             this._syncChunks();
         }
     }
+    /**
+     * Synchronize the chunks with the world.
+     * @param {boolean} allChunks - If true, sync all active chunks; otherwise, sync only updated chunks.
+     */
     _syncChunks(allChunks = false) {
         if (allChunks) {
             this._activeChunks.forEach((chunk) => chunk.sync());
@@ -18017,39 +18116,66 @@ class MapManager extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
             });
         }
     }
+    /**
+     * Handle the change of the active chunk.
+     * This function is debounced to avoid rapid updates.
+     */
     _onActiveChunkChanged() {
         let cx = this.activeChunk[0];
         let cz = this.activeChunk[1];
         (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)(`MapManager._onActiveChunkChanged`, `new active chunk: [${cx}, ${cz}]`);
-        _world__WEBPACK_IMPORTED_MODULE_4__.worldManager.cancel();
-        this._activeChunks.forEach((chunk) => {
-            let isOutOfDrawDistance = chunk.cx < (cx - _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks) ||
-                chunk.cx > (cx + _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks) ||
-                chunk.cz < (cz - _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks) ||
-                chunk.cz > (cz + _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks);
-            if (isOutOfDrawDistance) {
-                _chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.unload(chunk);
-            }
-        });
-        this._activeChunks = [];
-        // for (let z = -state.drawChunks; z <= state.drawChunks; z++) {
-        //     for (let x = -state.drawChunks; x <= state.drawChunks; x++) {
-        //         this._activeChunks.push(Chunk.load(cx + x, cz + z))
-        //     }
-        // }
+        let visibleChunks = [];
         for (let z = 0; z < _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks; z++) {
             for (let x = 0; x < _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks; x++) {
-                if (x === 0 && z === 0) {
-                    this._activeChunks.push(_chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.load(cx + x, cz + z));
+                if (x !== 0 && z !== 0) {
+                    visibleChunks.push([cx + x, cz + z]);
+                    visibleChunks.push([cx - x, cz + z]);
+                    visibleChunks.push([cx + x, cz - z]);
+                    visibleChunks.push([cx - x, cz - z]);
+                }
+                else if (x === 0 && z !== 0) {
+                    visibleChunks.push([cx, cz + z]);
+                    visibleChunks.push([cx, cz - z]);
+                }
+                else if (x !== 0 && z === 0) {
+                    visibleChunks.push([cx + x, cz]);
+                    visibleChunks.push([cx - x, cz]);
                 }
                 else {
-                    this._activeChunks.push(_chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.load(cx + x, cz + z));
-                    this._activeChunks.push(_chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.load(cx - x, cz + z));
-                    this._activeChunks.push(_chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.load(cx + x, cz - z));
-                    this._activeChunks.push(_chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.load(cx - x, cz - z));
+                    visibleChunks.push([cx, cz]);
                 }
             }
         }
+        let chunksToLoad = [];
+        let chunksToUnload = [];
+        let newActiveChunks = [];
+        this._activeChunks.forEach((chunk) => {
+            if ((0,lodash__WEBPACK_IMPORTED_MODULE_5__.find)(visibleChunks, (indices) => {
+                return chunk.cx === indices[0] && chunk.cz === indices[1];
+            }) === undefined) {
+                chunksToUnload.push(chunk);
+            }
+            else {
+                newActiveChunks.push(chunk);
+            }
+        });
+        visibleChunks.forEach((indices) => {
+            if ((0,lodash__WEBPACK_IMPORTED_MODULE_5__.find)(this._activeChunks, (chunk) => chunk.cx === indices[0] && chunk.cz === indices[1]) === undefined) {
+                chunksToLoad.push(indices);
+            }
+        });
+        if (chunksToLoad.length === 0 && chunksToUnload.length === 0) {
+            (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)(`MapManager.__onActiveChunkChanged`, `nothing to load or unload`);
+            return;
+        }
+        chunksToUnload.forEach(chunk => {
+            _chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.unload(chunk);
+        });
+        chunksToLoad.forEach((indices) => {
+            let chunk = _chunk__WEBPACK_IMPORTED_MODULE_2__.Chunk.load(indices[0], indices[1]);
+            newActiveChunks.push(chunk);
+        });
+        this._activeChunks = newActiveChunks;
         this.children = this._activeChunks;
     }
 }
@@ -18077,10 +18203,17 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// Texture loader for loading the tilemap texture
 let _textureLoader = new three__WEBPACK_IMPORTED_MODULE_2__.TextureLoader();
 let _tilemap = _textureLoader.load('assets/tiles.png');
 _tilemap.flipY = false;
+/**
+ * Patch the material with custom shaders and uniforms.
+ * @param {ShaderMaterial} mat - The material to be patched.
+ * @param {string[]} hooks - Array of strings representing hooks in the shader code.
+ */
 function _patchMaterial(mat, hooks) {
+    // Define the custom uniforms
     mat.uniforms = {
         uLightDirection: { value: new three__WEBPACK_IMPORTED_MODULE_2__.Vector3(0, 10, 2).normalize() },
         uFar: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.far },
@@ -18091,6 +18224,7 @@ function _patchMaterial(mat, hooks) {
     };
     // Assign the vertex shader and fragment shader through onBeforeCompile
     mat.onBeforeCompile = (shader) => {
+        // Pass the custom uniforms to the shader
         shader.uniforms.uLightDirection = mat.uniforms.uLightDirection;
         shader.uniforms.uFar = mat.uniforms.uFar;
         shader.uniforms.uNear = mat.uniforms.uNear;
@@ -18099,6 +18233,7 @@ function _patchMaterial(mat, hooks) {
         shader.uniforms.uTileSize = mat.uniforms.uTileSize;
         console.log(shader.vertexShader);
         console.log(shader.fragmentShader);
+        // Replace hooks in the vertex shader with custom code
         shader.vertexShader = shader.vertexShader.replace(hooks[0], `
         attribute vec3 instanceData;
         attribute float instanceVisibility;
@@ -18122,10 +18257,8 @@ function _patchMaterial(mat, hooks) {
         vPosition = position.xyz;
         vInstanceData = instanceData;
         vInstanceVisibility = instanceVisibility;
-
-        // mvPosition = modelViewMatrix * instanceMatrix * vec4(position,1.0);
-        // gl_Position = projectionMatrix * mvPosition;
       `);
+        // Replace hooks in the fragment shader with custom code
         shader.fragmentShader = shader.fragmentShader.replace(hooks[3], `
         uniform vec3 uColor;
         uniform vec3 uLightDirection;
@@ -18140,7 +18273,6 @@ function _patchMaterial(mat, hooks) {
         varying vec3 vWorldPosition;
         varying vec3 vInstanceData;
         varying float vInstanceVisibility;
-
       `);
         shader.fragmentShader = shader.fragmentShader.replace(hooks[4], `
         if (vInstanceVisibility < 0.5){
@@ -18153,7 +18285,6 @@ function _patchMaterial(mat, hooks) {
 
         // Use linear depth to fade objects in the distance
         diffuseColor.rgb *= tileColor.xyz;
-        //diffuseColor.rgb *= vInstanceData.z;
       `);
         shader.fragmentShader = shader.fragmentShader.replace(hooks[6], `
         #include <aomap_fragment>
@@ -18165,11 +18296,11 @@ function _patchMaterial(mat, hooks) {
         totalDiffuse *= pow(vInstanceData.z, 1.);
         totalSpecular *= pow(vInstanceData.z, 1.);
       `);
-        // Ensure you define the varying variables here, which are used in both vertex and fragment shaders
-        // e.g., shader.vertexShader = `varying vec2 vUv;` + shader.vertexShader;
-        //       shader.fragmentShader = `varying vec2 vUv;` + shader.fragmentShader;
     };
 }
+/**
+ * Represents a custom material based on MeshStandardMaterial with voxel rendering capabilities.
+ */
 class VoxelBlockStandardMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshStandardMaterial {
     constructor() {
         super({
@@ -18180,6 +18311,7 @@ class VoxelBlockStandardMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.Mesh
             flatShading: true
         });
         this.uniforms = null;
+        // Patch the material with custom shaders and uniforms
         _patchMaterial(this, [
             '#define STANDARD',
             '#include <uv_vertex>',
@@ -18192,12 +18324,16 @@ class VoxelBlockStandardMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.Mesh
         ]);
     }
 }
+/**
+ * Represents a custom material based on MeshLambertMaterial with voxel rendering capabilities.
+ */
 class VoxelBlockLamberMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshLambertMaterial {
     constructor() {
         super({
             flatShading: true
         });
         this.uniforms = null;
+        // Patch the material with custom shaders and uniforms
         _patchMaterial(this, [
             '#define LAMBERT',
             '#include <uv_vertex>',
@@ -18210,12 +18346,16 @@ class VoxelBlockLamberMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshLa
         ]);
     }
 }
+/**
+ * Represents a custom material based on MeshLambertMaterial with voxel rendering capabilities.
+ */
 class VoxelBlockPhongMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshLambertMaterial {
     constructor() {
         super({
             flatShading: true
         });
         this.uniforms = null;
+        // Patch the material with custom shaders and uniforms
         _patchMaterial(this, [
             '#define LAMBERT',
             '#include <uv_vertex>',
@@ -18228,7 +18368,12 @@ class VoxelBlockPhongMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshLam
         ]);
     }
 }
+/**
+ * Get the base material for rendering voxel blocks based on the current feature level.
+ * @returns {Material} - The base material.
+ */
 function getBlockBaseMaterial() {
+    // Return either VoxelBlockLamberMaterial or VoxelBlockStandardMaterial based on the feature level
     return _state__WEBPACK_IMPORTED_MODULE_0__.featureLevel === _state__WEBPACK_IMPORTED_MODULE_0__.FeatureLevel.Low ? new VoxelBlockLamberMaterial() : new VoxelBlockStandardMaterial();
 }
 
@@ -18264,7 +18409,7 @@ const state = {
     seed: 1,
     chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
-    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Prism6,
+    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Cube,
     worldHeight: 12,
     camera: null,
     scene: null,
@@ -18311,13 +18456,25 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
+/**
+ * Enumeration representing the type of queue for a task.
+ */
 var QueueType;
 (function (QueueType) {
     QueueType[QueueType["Pre"] = 0] = "Pre";
     QueueType[QueueType["Normal"] = 1] = "Normal";
-    QueueType[QueueType["Post"] = 2] = "Post";
+    QueueType[QueueType["Post"] = 2] = "Post"; // Post-queue for tasks that should be executed after other tasks.
 })(QueueType || (QueueType = {}));
+/**
+ * Represents a single task to be executed.
+ */
 class Task {
+    /**
+     * Constructor for Task class.
+     * @param {Object} options - Options object for the task.
+     * @param {string[]} options.tags - Tags associated with the task.
+     * @param {TaskFunction} options.runner - Function representing the task to be executed.
+     */
     constructor({ tags, runner }) {
         this._tags = null;
         this._canceled = false;
@@ -18325,6 +18482,10 @@ class Task {
         this._tags = tags || [];
         this._runner = runner;
     }
+    /**
+     * Run the task.
+     * @param {Function} done - Callback function to be called when the task is completed.
+     */
     run(done) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this._canceled || this._completed) {
@@ -18336,6 +18497,11 @@ class Task {
             }
         });
     }
+    /**
+     * Check if the task matches the provided tags.
+     * @param {string[]} tags - Tags to check against.
+     * @returns {boolean} - True if the task matches all the tags, false otherwise.
+     */
     match(tags) {
         for (let i = 0; i < tags.length; i++) {
             let t = tags[i];
@@ -18345,11 +18511,22 @@ class Task {
         }
         return true;
     }
+    /**
+     * Cancel the task.
+     */
     cancel() {
         this._canceled = true;
     }
 }
+/**
+ * Represents a task manager that handles task queues and execution.
+ */
 class Tasker {
+    /**
+     * Constructor for Tasker class.
+     * @param {Object} options - Options object for the tasker.
+     * @param {number} options.rate - The rate at which tasks should be executed (in milliseconds).
+     */
     constructor({ rate }) {
         this._queues = null;
         this._running = false;
@@ -18366,6 +18543,9 @@ class Tasker {
         }, 1000 / rate);
         this._done = this._done.bind(this);
     }
+    /**
+     * Execute the tasks in the queues.
+     */
     tick() {
         if (this._locked === false) {
             for (let q = 0; q < this._queues.length; q++) {
@@ -18382,6 +18562,10 @@ class Tasker {
         }
         _gui__WEBPACK_IMPORTED_MODULE_1__.monitoringData.totalTasks = (this._queues[0].length + this._queues[1].length + this._queues[2].length).toString();
     }
+    /**
+     * Flush the tasks in the queues based on tags.
+     * @param {string[]} tags - Tags to filter the tasks to be flushed.
+     */
     flush(tags) {
         tags = tags || [];
         this._queues.forEach((queue, index) => {
@@ -18395,6 +18579,14 @@ class Tasker {
         });
         this._locked = false;
     }
+    /**
+     * Add a new task to the appropriate queue.
+     * @param {TaskFunction} runner - Function representing the task to be executed.
+     * @param {string[]} tags - Tags associated with the task.
+     * @param {QueueType} queueType - The type of queue for the task.
+     * @param {boolean} replaceMatch - If true, replace any existing task in the queue that matches the provided tags.
+     * @returns {Task} - The newly created task.
+     */
     add(runner, tags, queueType, replaceMatch = true) {
         let task = new Task({
             tags,
@@ -18410,16 +18602,29 @@ class Tasker {
         }
         return task;
     }
+    /**
+     * Start executing the tasks in the queues.
+     */
     start() {
         this._running = true;
     }
+    /**
+     * Stop executing the tasks in the queues.
+     */
     stop() {
         this._running = false;
     }
+    /**
+     * Callback function to unlock the tasker after a task is completed.
+     * @private
+     */
     _done() {
         this._locked = false;
     }
 }
+/**
+ * The global tasker instance that can be used throughout the application.
+ */
 const tasker = new Tasker({ rate: (_state__WEBPACK_IMPORTED_MODULE_2__.featureLevel + 1) * 15 });
 
 
@@ -80603,7 +80808,7 @@ function main() {
     let controls = _state__WEBPACK_IMPORTED_MODULE_3__.state.controls = new _controls__WEBPACK_IMPORTED_MODULE_0__.VoxelMapControls(camera, renderer.domElement);
     controls.screenSpacePanning = false;
     controls.minDistance = 20;
-    controls.maxDistance = 50;
+    controls.maxDistance = 150;
     controls.maxPolarAngle = (Math.PI / 2.5);
     controls.maxPolarAngle = (Math.PI);
     controls.enableDamping = true;

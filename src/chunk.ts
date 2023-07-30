@@ -8,10 +8,15 @@ import { worldManager } from "./world"
 import { monitoringData } from "./gui"
 import { debounce } from "lodash"
 
-
+// Pool of chunk objects for reusability
 const _chunkPool: Chunk[] = []
-const _chunkPoolLimit = 128
 
+// Maximum size limit of the chunk pool
+const _chunkPoolLimit = 100
+
+/**
+ * Represents a single chunk in the world.
+ */
 export class Chunk extends Group {
 
     static _chunksCounter = 0;
@@ -28,14 +33,24 @@ export class Chunk extends Group {
     _instancedMesh: InstancedMesh = null
     _gridHelper: GridHelper
 
+    /**
+     * The x-coordinate of the first block in the chunk.
+     */
     get bx0() {
         return this.cx * state.chunkSize
     }
 
+    /**
+     * The z-coordinate of the first block in the chunk.
+     */
     get bz0() {
         return this.cz * state.chunkSize
     }
 
+    /**
+     * Create a new Chunk object.
+     * @param {Object} options - Options object containing the x and z coordinates of the chunk.
+     */
     constructor({ cx, cz }) {
         logd('Chunk', `new [${cx}, ${cz}]}`)
         super()
@@ -44,12 +59,13 @@ export class Chunk extends Group {
         Chunk._chunksCounter++
         this.matrixAutoUpdate = false
 
-        // instanced mesh
+        // Create instanced mesh for rendering blocks
         this._instancedMesh = Chunk._createInstancedMesh()
         this._instanceDataAttribute = this._instancedMesh.geometry.attributes['instanceData'] as InstancedBufferAttribute
         this._instanceVisibilityAttribute = this._instancedMesh.geometry.attributes['instanceVisibility'] as InstancedBufferAttribute
         this.add(this._instancedMesh)
 
+        // Create grid helper for visual debugging
         this._gridHelper = new GridHelper(state.chunkSize, state.chunkSize, 0x999999, 0x999999)
         this._gridHelper.position.set(state.chunkSize / 2 - 0.5, 0, state.chunkSize / 2 - 0.5)
         this.add(this._gridHelper)
@@ -57,11 +73,18 @@ export class Chunk extends Group {
         this._updateGeometry = debounce(this._updateGeometry.bind(this), 1000)
     }
 
+    /**
+     * Synchronize the chunk with the world.
+     */
     sync() {
         logd('Chunk.sync', this.toString())
         this._updateGeometry(true)
     }
 
+    /**
+     * Update the geometry of the chunk.
+     * @param {boolean} updateAttrs - Whether to update the attributes.
+     */
     _updateGeometry(updateAttrs: boolean = false) {
         if (updateAttrs) {
             logd('Chunk._updateGeometry', `updating attributes at [${this.cx}, ${this.cz}]`)
@@ -87,17 +110,31 @@ export class Chunk extends Group {
         this.updateMatrix()
     }
 
+    /**
+     * Compute the instance index based on the block coordinates.
+     * @param {number} x - The x-coordinate of the block.
+     * @param {number} y - The y-coordinate of the block.
+     * @param {number} z - The z-coordinate of the block.
+     * @returns {number} - The computed instance index.
+     */
     _computedInstanceIndex(x, y, z): number {
         return Chunk.computedInstanceIndex(this.bx0, this.bz0, x, y, z)
     }
 
-
+    /**
+     * Deallocate resources and clean up the chunk.
+     */
     kill() {
         if (this._instancedMesh) {
             this._instancedMesh.geometry.dispose()
         }
     }
 
+    /**
+     * Set up the chunk at the specified coordinates.
+     * @param {number} cx - The x-coordinate of the chunk.
+     * @param {number} cz - The z-coordinate of the chunk.
+     */
     setup(cx: number, cz: number) {
         let isWorldReady = worldManager.checkChunkGeneration(cx, cz)
         this.cx = cx
@@ -111,14 +148,33 @@ export class Chunk extends Group {
         }
     }
 
+    /**
+     * Get a string representation of the chunk.
+     * @returns {string} - A string representation of the chunk.
+     */
     override toString() {
         return `Chunk(cx=${this.cx}, cz=${this.cz})`
     }
 
+    /**
+     * Compute the instance index based on the block coordinates.
+     * @param {number} bx0 - The x-coordinate of the first block in the chunk.
+     * @param {number} bz0 - The z-coordinate of the first block in the chunk.
+     * @param {number} x - The x-coordinate of the block.
+     * @param {number} y - The y-coordinate of the block.
+     * @param {number} z - The z-coordinate of the block.
+     * @returns {number} - The computed instance index.
+     */
     static computedInstanceIndex(bx0, bz0, x, y, z): number {
         return Math.floor((x - bx0) + state.chunkSize * (y + state.worldHeight * (z - bz0)))
     }
 
+    /**
+     * Load a chunk with the specified coordinates.
+     * @param {number} cx - The x-coordinate of the chunk.
+     * @param {number} cz - The z-coordinate of the chunk.
+     * @returns {Chunk} - The loaded chunk object.
+     */
     static load(cx: number, cz: number) {
         let chunk: Chunk = _chunkPool.pop()
         if (chunk === undefined) {
@@ -129,21 +185,32 @@ export class Chunk extends Group {
             logd('Chunk:load', `loading from pool ${chunk.toString()}`)
         }
 
+        chunk.visible = true
         monitoringData.chunksPoolSize = _chunkPool.length.toString()
         return chunk
     }
 
+    /**
+     * Unload a chunk and return it to the chunk pool.
+     * @param {Chunk} chunk - The chunk object to unload.
+     */
     static unload(chunk: Chunk) {
         if (_chunkPool.length < _chunkPoolLimit) {
             logd('Chunk:unload', `unloading to pool ${chunk.toString()}`)
             _chunkPool.push(chunk)
         }
 
+        chunk.visible = true
         monitoringData.chunksPoolSize = _chunkPool.length.toString()
     }
 
+    /**
+     * Create the base instanced mesh for rendering blocks.
+     * @returns {InstancedMesh} - The instanced mesh.
+     */
     static _createInstancedMesh(): InstancedMesh {
         if (Chunk._baseInstancedMesh === null) {
+            // Create base instanced block geometry and attributes
             const _instancedBlockGeometry = new InstancedBufferGeometry().copy(Block.getShapeGeometry());
             const _instanceDataArray = new Float32Array(blockManager.maxBlocksPerChunk * 3)
             const _instanceDataAttribute = new InstancedBufferAttribute(_instanceDataArray, 3);
@@ -151,6 +218,7 @@ export class Chunk extends Group {
             const _instanceVisibilityArray = new Float32Array(blockManager.maxBlocksPerChunk)
             const _instanceVisibilityAttribute = new InstancedBufferAttribute(_instanceVisibilityArray, 1);
 
+            // Get the base block material
             Chunk._baseBlockMaterial = Chunk._baseBlockMaterial || getBlockBaseMaterial()
 
             for (let i = 0; i < blockManager.maxBlocksPerChunk; i++) {
@@ -158,9 +226,11 @@ export class Chunk extends Group {
                 _instanceVisibilityAttribute.setX(i, 0)
             }
 
+            // Set instance attributes to the instanced geometry
             _instancedBlockGeometry.setAttribute('instanceData', _instanceDataAttribute);
             _instancedBlockGeometry.setAttribute('instanceVisibility', _instanceVisibilityAttribute);
 
+            // Create the base instanced mesh
             Chunk._baseInstancedMesh = new InstancedMesh(_instancedBlockGeometry, Chunk._baseBlockMaterial, blockManager.maxBlocksPerChunk);
 
             for (let x = 0; x < state.chunkSize; x++) {
@@ -191,7 +261,7 @@ export class Chunk extends Group {
             Chunk._baseInstancedMesh.updateMatrix()
             return Chunk._createInstancedMesh()
         } else {
-
+            // Clone the base instanced mesh
             let clonedInstancedMesh = Chunk._baseInstancedMesh.clone()
             clonedInstancedMesh.geometry = Chunk._baseInstancedMesh.geometry.clone()
 
@@ -201,5 +271,4 @@ export class Chunk extends Group {
             return clonedInstancedMesh
         }
     }
-
 }

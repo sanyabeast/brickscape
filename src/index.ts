@@ -5,9 +5,9 @@ import { createGui } from './gui';
 import { FeatureLevel, featureLevel, state } from './state'
 import { Environment } from './environment';
 import { VoxelWorldGenerator } from './generator';
-import { Tasker, tasker } from './tasker';
-import { WorldManager, worldManager } from './world';
-import { BlockManager, blockManager } from './blocks';
+import { tasker } from './tasker';
+import { worldManager } from './world';
+import { blockManager } from './blocks';
 
 
 function main() {
@@ -16,6 +16,7 @@ function main() {
     state.tasker = tasker
     state.world = worldManager
     state.blockManager = blockManager
+
 
     const pixelRatio = window.devicePixelRatio
     const fov = 60;
@@ -42,7 +43,7 @@ function main() {
     let controls = state.controls = new VoxelMapControls(camera, renderer.domElement)
     controls.screenSpacePanning = false;
     controls.minDistance = 20;
-    controls.maxDistance = 50;
+    controls.maxDistance = 150;
     controls.maxPolarAngle = (Math.PI / 2.5);
     controls.maxPolarAngle = (Math.PI);
     controls.enableDamping = true
@@ -91,7 +92,6 @@ function main() {
     state.tasker.start()
     updateRenderSize()
     requestAnimationFrame(render);
-
 
 
 }
