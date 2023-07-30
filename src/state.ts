@@ -1,5 +1,5 @@
 import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
-import { VoxelWorldGenerator } from "./generator"
+import { GenerationHelper } from "./generator"
 import { VoxelMapControls as VoxelWorldControls } from "./controls"
 import { Tasker } from "./tasker"
 import { MapManager } from "./map"
@@ -30,7 +30,7 @@ interface IAppState {
     camera: PerspectiveCamera
     scene: Scene
     renderer: WebGLRenderer
-    generator: VoxelWorldGenerator,
+    generator: GenerationHelper,
     tasker: Tasker
     world: WorldManager
     blockManager: BlockManager

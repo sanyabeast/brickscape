@@ -4,7 +4,7 @@ import { MapManager } from './map';
 import { createGui } from './gui';
 import { FeatureLevel, featureLevel, state } from './state'
 import { Environment } from './environment';
-import { VoxelWorldGenerator } from './generator';
+import { GenerationHelper, generationHelper } from './generator';
 import { tasker } from './tasker';
 import { worldManager } from './world';
 import { blockManager } from './blocks';
@@ -12,11 +12,10 @@ import { blockManager } from './blocks';
 
 function main() {
 
-    state.generator = new VoxelWorldGenerator(state.seed)
+    state.generator = generationHelper
     state.tasker = tasker
     state.world = worldManager
     state.blockManager = blockManager
-
 
     const pixelRatio = window.devicePixelRatio
     const fov = 60;

@@ -1,4 +1,6 @@
 import { Block, BlockType, blockManager } from "./blocks"
+import { generationHelper } from "./generator"
+import { EBlockCreationSource, EBlockReplacingStrategy, IBlockCreationLevels, IBlockCreationRule, IBlockPlacement, rules } from "./rules"
 import { featureLevel, state } from "./state"
 import { QueueType, tasker } from "./tasker"
 import { getChunkId, lerp, logd } from "./utils"
@@ -29,7 +31,7 @@ export class WorldManager {
         if (this._chunksGeneratedStatus[chunkId] === undefined) {
             this._chunksGeneratedStatus[chunkId] = false
             tasker.add((done) => {
-                this._generateChunk(cx, cz)
+                this._genrateChunkWithRules(cx, cz)
                 this._chunksGeneratedStatus[chunkId] = true
                 done()
             }, ['world', 'generate', getChunkId(cx, cz)], QueueType.Normal)
@@ -56,6 +58,112 @@ export class WorldManager {
         }
     }
 
+    _genrateChunkWithRules(cx: number, cz: number) {
+        rules.forEach((rule, index) => {
+            for (let ir = 0; ir < rule.create.length; ir++) {
+                let creationRule: IBlockCreationRule = rule.create[ir]
+                blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
+                    if (this._testLevels(y, creationRule.levels)) {
+                        if (this._testCreationRule(x, y, z, creationRule)) {
+                            this._placeStructure(x, y, z, rule.structure, creationRule.replace)
+                        }
+                    }
+
+                })
+            }
+        })
+    }
+
+    _placeStructure(x: number, y: number, z: number, structure: IBlockPlacement[], replaceStrategy: EBlockReplacingStrategy) {
+        structure.forEach((placement: IBlockPlacement, index) => {
+            this._placeBlock(x + placement.offset[0], y + placement.offset[1], z + placement.offset[1], placement.blockType, replaceStrategy)
+        })
+    }
+
+    _placeBlock(x, y, z, blockType: BlockType, replaceStrategy: EBlockReplacingStrategy) {
+        // console.log(x, y, z)
+        switch (replaceStrategy) {
+            case EBlockReplacingStrategy.Replace: {
+                new Block({
+                    chunk: this,
+                    x: x,
+                    y: y,
+                    z: z,
+                    lightness: 1,
+                    blockType: blockType
+                })
+            }
+            case EBlockReplacingStrategy.DontReplace: {
+                if (!blockManager.getBlockAt(x, y, z)) {
+                    new Block({
+                        chunk: this,
+                        x: x,
+                        y: y,
+                        z: z,
+                        lightness: 1,
+                        blockType: blockType
+                    })
+                }
+                break;
+            }
+            case EBlockReplacingStrategy.OnlyReplace: {
+                if (blockManager.getBlockAt(x, y, z)) {
+                    new Block({
+                        chunk: this,
+                        x: x,
+                        y: y,
+                        z: z,
+                        lightness: 1,
+                        blockType: blockType
+                    })
+                }
+                break;
+            }
+            case EBlockReplacingStrategy.Stack: {
+                let elevation = blockManager.getElevationAt(x, z)
+                if (elevation < state.worldHeight) {
+                    new Block({
+                        chunk: this,
+                        x: x,
+                        y: elevation + 1,
+                        z: z,
+                        lightness: 1,
+                        blockType: blockType
+                    })
+                }
+                break;
+            }
+        }
+
+    }
+
+    _testLevels(y: number, levels: IBlockCreationLevels[]): boolean {
+        for (let i = 0; i < levels.length; i++) {
+            let level = levels[i]
+            if (y >= level.min && y < level.max) {
+                return true
+            }
+        }
+        return false
+    }
+
+    _testCreationRule(x: number, y: number, z: number, creationRule: IBlockCreationRule): boolean {
+        switch (creationRule.source) {
+            case EBlockCreationSource.Perlin3D: {
+                return generationHelper.getPerlin3DNoise(x, z, null, creationRule.params) < creationRule.ratio
+            }
+            case EBlockCreationSource.Perlin4D: {
+                return generationHelper.getPerlin4DNoise(x, z, y, creationRule.params) < creationRule.ratio
+            }
+            case EBlockCreationSource.Constant: {
+                return true
+            }
+            default: {
+                return false;
+            }
+        }
+    }
+
     _generateChunk(cx: number, cz: number) {
         logd('WorldManager._generateChunk', `start generating at [${cx}, ${cz}]`)
         // bedrock level
@@ -72,12 +180,13 @@ export class WorldManager {
 
         // main perlin noise
         blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            let noiseValue = state.generator.getNoiseValue({
-                x: x,
-                y: z,
-                scale: 0.01,
-                iterations: 32
-            })
+            let noiseValue = state.generator.getPerlin3DNoise(
+                x,
+                z,
+                null,
+                {
+                    paramA: 4
+                })
 
             let heightValue = Math.floor(state.worldHeight * noiseValue) + 1
 
