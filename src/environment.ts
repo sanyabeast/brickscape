@@ -1,9 +1,13 @@
-import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color, Light, Scene } from "three";
+import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color, Light, Scene, AmbientLight } from "three";
 import { Lensflare, LensflareElement } from "three/examples/jsm/objects/LensFlare"
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { rgbeLoader, textureLoader } from "./loaders";
-import { state } from "./state";
+import { featureLevel, state } from "./state";
 import { clamp, lerp } from "./utils";
+import { throttle } from "lodash";
+
+const _envUpdateRateLimit = 15
+
 
 interface IFlareData {
     texture: string
@@ -11,6 +15,8 @@ interface IFlareData {
     distance: number
     color: any
 }
+
+
 const flaresTable = [
     {
         texture: 'assets/flares/lensflare0.png',
@@ -46,6 +52,7 @@ const flaresTable = [
 
 export class Environment extends Group {
     sun: DirectionalLight = null
+    ambient: AmbientLight = null
     fog: FogExp2 = null
     daytime: number = 0.9
     dayspeed: number = 1 / 2048
@@ -54,17 +61,31 @@ export class Environment extends Group {
     minSunIntensity: number = -0.5
     maxSunIntensity: number = 0.5
 
-    minEnvIntensity: number = 0.01
-    maxEnvIntensity: number = 0.5
+    minAmbIntensity: number = 0.01
+    maxAmbIntensity: number = 0.5
 
     constructor({ scene, camera, renderer }) {
         super()
-        scene.fog = new FogExp2(new Color(0x777777), 0.005)
+
+        this.fog = new FogExp2(new Color(0x777777), 0.005)
+
+        if (featureLevel > 0) {
+            scene.fog = this.fog
+        }
 
         let sun = this.sun = new DirectionalLight(0xfffeee, 1)
         sun.position.set(0.5, 1, -0.5);
         scene.add(sun)
-        Environment.addFlares(sun, scene)
+
+        if (featureLevel > 0) {
+            Environment.addFlares(sun, scene)
+        }
+
+        if (featureLevel == 0) {
+            this.ambient = new AmbientLight(0xffffff, 0.2)
+            scene.add(this.ambient)
+        }
+
         // Create the lens flare object
 
         let envMap = rgbeLoader.load('assets/hdr/quarry.hdr', () => {
@@ -77,6 +98,7 @@ export class Environment extends Group {
             scene.backgroundBlurriness = 1
         });
 
+        this.update = throttle(this.update.bind(this), 1000 / _envUpdateRateLimit)
         this.update(0)
     }
 
@@ -90,16 +112,25 @@ export class Environment extends Group {
         this.sun.intensity = clamp(lerp(this.minSunIntensity, this.maxSunIntensity, clamp(sunHeight, 0, 1)), 0, 1)
 
         this.sun.position.set(sunX, sunHeight * this.sunRotationRadius * this.sunElevation, sunZ);
-        (this.sun as any).flare.position.copy(this.sun.position);
+        if (featureLevel > 0) {
+            (this.sun as any).flare.position.copy(this.sun.position);
+        }
+
+
         (state.scene as any).backgroundIntensity = backgroundIntensity;
 
+        if (featureLevel > 0) {
+            let envMapIntensity = lerp(this.minAmbIntensity, this.maxAmbIntensity, clamp(sunHeight, 0, 1))
+            state.scene.traverse((object: any) => {
+                if (object.isMesh) {
+                    object.material.envMapIntensity = envMapIntensity
+                }
+            })
+        } else {
+            let ambIntensity = lerp(this.minAmbIntensity, this.maxAmbIntensity, clamp(sunHeight, 0, 1))
+            this.ambient.intensity = ambIntensity
+        }
 
-        let envMapIntensity = lerp(this.minEnvIntensity, this.maxEnvIntensity, clamp(sunHeight, 0, 1))
-        state.scene.traverse((object: any) => {
-            if (object.isMesh) {
-                object.material.envMapIntensity = envMapIntensity
-            }
-        })
 
         this.daytime += this.dayspeed * frameDelta
     }

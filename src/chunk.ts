@@ -1,7 +1,7 @@
 import { Group, InstancedMesh, InstancedBufferGeometry, InstancedBufferAttribute, Object3D, Material, GridHelper } from "three"
 import { logd } from "./utils"
 import { state } from "./state"
-import { VoxelBlockStandardMaterial } from "./shaders"
+import { getBlockBaseMaterial } from "./shaders"
 import { Task } from "./tasker"
 import { Block, BlockShape, blockManager } from "./blocks"
 import { worldManager } from "./world"
@@ -151,7 +151,7 @@ export class Chunk extends Group {
             const _instanceVisibilityArray = new Float32Array(blockManager.maxBlocksPerChunk)
             const _instanceVisibilityAttribute = new InstancedBufferAttribute(_instanceVisibilityArray, 1);
 
-            Chunk._baseBlockMaterial = Chunk._baseBlockMaterial || new VoxelBlockStandardMaterial({ color: 0xFFFFFF, maxInstances: blockManager.maxBlocksPerChunk, state })
+            Chunk._baseBlockMaterial = Chunk._baseBlockMaterial || getBlockBaseMaterial()
 
             for (let i = 0; i < blockManager.maxBlocksPerChunk; i++) {
                 _instanceDataAttribute.setXYZ(i, 0, 0, 1);

@@ -31,7 +31,7 @@ export function logd(tag: string, ...args: any[]) {
 }
 
 export function getChunkId(cx: number, cz: number): string {
-    return `${cx}_${cz}`
+    return `c${cx}_${cz}`
 }
 
 export function getRandomHexColor() {

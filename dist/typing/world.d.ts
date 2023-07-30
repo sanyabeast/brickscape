@@ -10,5 +10,6 @@ export declare class WorldManager {
     checkChunkGeneration(cx: number, cz: number): boolean;
     cancel(): void;
     _generateChunk(cx: number, cz: number): void;
+    _updateChunkLighting(cx: number, cz: number): void;
 }
 export declare const worldManager: WorldManager;

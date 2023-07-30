@@ -1,14 +1,17 @@
 import { Group, Vector2, Vector3, Raycaster, Plane } from "three";
 import { getNearestMultiple, logd } from "./utils";
-import { state } from "./state"
+import { FeatureLevel, featureLevel, state } from "./state"
 import { Chunk } from "./chunk";
 import { monitoringData } from "./gui";
 import { worldManager } from "./world";
+import { debounce, throttle } from "lodash";
 
 
 let _groundPlane = new Plane(new Vector3(0, 1, 0), 0);
 let _intersection = new Vector3();
 let _raycaster = new Raycaster();
+let _chunkUpdateRateLimit: number = (FeatureLevel.Low + 1) * 10
+let _chunkSyncRateLimit: number = (FeatureLevel.Low + 1) * 10
 
 export function getCameraLookIntersection(camera) {
     _raycaster.setFromCamera(new Vector2(0, 0), camera);
@@ -26,6 +29,9 @@ export class MapManager extends Group {
         this.camera = camera
         this.activeChunk = [null, null]
         this._activeChunks = []
+
+        this._onActiveChunkChanged = debounce(this._onActiveChunkChanged.bind(this), 1000 / _chunkUpdateRateLimit)
+        this._syncChunks = throttle(this._syncChunks.bind(this), 1000 / _chunkSyncRateLimit)
     }
     update() {
         let cameraLook = getCameraLookIntersection(this.camera)

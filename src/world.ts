@@ -1,5 +1,6 @@
 import { Block, BlockType, blockManager } from "./blocks"
-import { state } from "./state"
+import { featureLevel, state } from "./state"
+import { QueueType, tasker } from "./tasker"
 import { getChunkId, lerp, logd } from "./utils"
 
 export class WorldManager {
@@ -27,20 +28,27 @@ export class WorldManager {
         let chunkId = getChunkId(cx, cz)
         if (this._chunksGeneratedStatus[chunkId] === undefined) {
             this._chunksGeneratedStatus[chunkId] = false
-            console.log(this._chunksGeneratedStatus, chunkId)
-            state.tasker.add((done) => {
+            tasker.add((done) => {
                 this._generateChunk(cx, cz)
                 this._chunksGeneratedStatus[chunkId] = true
                 done()
-            }, ['world', 'generate'], false)
+            }, ['world', 'generate', getChunkId(cx, cz)], QueueType.Normal)
+            tasker.add((done) => {
+                this._updateChunkLighting(cx, cz)
+                done()
+            }, ['world', 'generate', 'shading', getChunkId(cx, cz)], QueueType.Post, false)
             return false
         } else {
+            tasker.add((done) => {
+                this._updateChunkLighting(cx, cz)
+                done()
+            }, ['world', 'generate', 'shading', getChunkId(cx, cz)], QueueType.Post, false)
             return true
         }
     }
 
     cancel() {
-        state.tasker.flush(['world', 'generate'])
+        tasker.flush(['world', 'generate'])
         for (let k in this._chunksGeneratedStatus) {
             if (this._chunksGeneratedStatus[k] === false) {
                 this._chunksGeneratedStatus[k] = undefined
@@ -125,6 +133,11 @@ export class WorldManager {
             }
         })
 
+
+        this.updatedChunks.push([cx, cz])
+    }
+
+    _updateChunkLighting(cx: number, cz: number) {
         // shading 
 
         blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
@@ -153,6 +166,7 @@ export class WorldManager {
         })
 
         this.updatedChunks.push([cx, cz])
+
     }
 }
 

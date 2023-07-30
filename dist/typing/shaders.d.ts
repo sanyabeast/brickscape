@@ -1,9 +1,14 @@
-import { MeshStandardMaterial } from "three";
+import { MeshStandardMaterial, MeshLambertMaterial, Material } from "three";
 export declare class VoxelBlockStandardMaterial extends MeshStandardMaterial {
     uniforms: any;
-    constructor({ color, maxInstances, state }: {
-        color: any;
-        maxInstances: any;
-        state: any;
-    });
+    constructor();
 }
+export declare class VoxelBlockLamberMaterial extends MeshLambertMaterial {
+    uniforms: any;
+    constructor();
+}
+export declare class VoxelBlockPhongMaterial extends MeshLambertMaterial {
+    uniforms: any;
+    constructor();
+}
+export declare function getBlockBaseMaterial(): Material;

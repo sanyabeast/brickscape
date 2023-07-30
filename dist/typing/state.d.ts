@@ -5,6 +5,12 @@ import { Tasker } from "./tasker";
 import { MapManager } from "./map";
 import { BlockManager, BlockShape } from "./blocks";
 import { WorldManager } from "./world";
+export declare enum FeatureLevel {
+    Low = 0,
+    Mid = 1,
+    High = 2
+}
+export declare let featureLevel: FeatureLevel;
 interface IAppState {
     maxChunksInMemory: number;
     seed: number;

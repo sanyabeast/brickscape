@@ -1,6 +1,7 @@
-import { DirectionalLight, Group, FogExp2, Light, Scene } from "three";
+import { DirectionalLight, Group, FogExp2, Light, Scene, AmbientLight } from "three";
 export declare class Environment extends Group {
     sun: DirectionalLight;
+    ambient: AmbientLight;
     fog: FogExp2;
     daytime: number;
     dayspeed: number;
@@ -8,8 +9,8 @@ export declare class Environment extends Group {
     sunElevation: number;
     minSunIntensity: number;
     maxSunIntensity: number;
-    minEnvIntensity: number;
-    maxEnvIntensity: number;
+    minAmbIntensity: number;
+    maxAmbIntensity: number;
     constructor({ scene, camera, renderer }: {
         scene: any;
         camera: any;

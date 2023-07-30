@@ -2,30 +2,30 @@ import { PerspectiveCamera, WebGLRenderer, Scene } from 'three';
 import { VoxelMapControls } from './controls';
 import { MapManager } from './map';
 import { createGui } from './gui';
-import { state } from './state'
+import { FeatureLevel, featureLevel, state } from './state'
 import { Environment } from './environment';
 import { VoxelWorldGenerator } from './generator';
-import { Tasker } from './tasker';
+import { Tasker, tasker } from './tasker';
 import { WorldManager, worldManager } from './world';
-import { BlockManager } from './blocks';
+import { BlockManager, blockManager } from './blocks';
 
 
 function main() {
 
     state.generator = new VoxelWorldGenerator(state.seed)
-    state.tasker = new Tasker({ rate: 30 })
-    state.world = WorldManager.getInstance()
-    state.blockManager = BlockManager.getInstance()
+    state.tasker = tasker
+    state.world = worldManager
+    state.blockManager = blockManager
 
     const pixelRatio = window.devicePixelRatio
-    const fov = 89;
+    const fov = 60;
     const near = 0.1;
     const far = 2048;
     let aspect = 2;  // the canvas default
 
     const canvas = state.canvas = document.querySelector('#c');
     const renderer = state.renderer = new WebGLRenderer({ canvas });
-    renderer.setPixelRatio(pixelRatio);
+    renderer.setPixelRatio(featureLevel == FeatureLevel.Low ? 1 : pixelRatio);
 
     const camera = state.camera = new PerspectiveCamera(fov, aspect, near, far);
     const scene = state.scene = new Scene();
@@ -46,8 +46,8 @@ function main() {
     controls.maxPolarAngle = (Math.PI / 2.5);
     controls.maxPolarAngle = (Math.PI);
     controls.enableDamping = true
-    controls.dampingFactor = 0.01
-    controls.panSpeed = 0.75
+    controls.dampingFactor = 0.005
+    controls.panSpeed = 1
 
     // MAP
     const map = state.map = new MapManager({

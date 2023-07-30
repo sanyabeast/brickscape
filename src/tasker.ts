@@ -1,7 +1,13 @@
 import { findIndex, indexOf } from "lodash"
 import { logd } from "./utils"
 import { monitoringData } from "./gui"
+import { featureLevel } from "./state"
 
+export enum QueueType {
+    Pre,
+    Normal,
+    Post
+}
 
 export type TaskFunction = (done: () => void) => void
 
@@ -37,10 +43,15 @@ export class Task {
 }
 
 export class Tasker {
-    _queue: Task[] = []
+    _queues: Task[][] = null
     _running: boolean = false
     _locked: boolean = false
     constructor({ rate }) {
+        this._queues = [
+            [],
+            [],
+            []
+        ]
         setInterval(() => {
             if (this._running) {
                 this.tick()
@@ -50,49 +61,50 @@ export class Tasker {
     }
     tick() {
         if (this._locked === false) {
-            let task = undefined
-
-            if (task === undefined) {
-                task = this._queue.pop()
+            for (let q = 0; q < this._queues.length; q++) {
+                let task = this._queues[q].pop()
+                if (task) {
+                    this._locked = true
+                    task.run(this._done)
+                    break;
+                }
             }
-
-            if (task !== undefined) {
-                // console.log('task found')
-                this._locked = true
-                task.run(this._done)
-            }
-
-            monitoringData.totalTasks = (this._queue.length).toString()
         } else {
             console.log('tasker is locked')
         }
+
+        monitoringData.totalTasks = (this._queues[0].length + this._queues[1].length + this._queues[2].length).toString()
     }
     flush(tags?: String[]) {
         tags = tags || []
-        let cleanedNormalQueue = []
 
-        this._queue.forEach((task) => {
-            if (!task.match(tags)) {
-                cleanedNormalQueue.push(task)
-            }
+        this._queues.forEach((queue, index) => {
+            let cleaned = []
+            queue.forEach((task) => {
+                if (!task.match(tags)) {
+                    cleaned.push(task)
+                }
+            })
+
+            this._queues[index] = cleaned
         })
 
-        this._queue = cleanedNormalQueue
         this._locked = false
     }
-    add(runner: TaskFunction, tags: String[], replaceMatch: boolean = true): Task {
+    add(runner: TaskFunction, tags: String[], queueType: QueueType, replaceMatch: boolean = true): Task {
         let task = new Task({
             tags,
             runner
         })
-        let targetQueue = this._queue;
 
-        let index = replaceMatch ? findIndex(targetQueue, (el) => el.match(tags)) : -1
+        let queue = this._queues[queueType];
+
+        let index = replaceMatch ? findIndex(queue, (el) => el.match(tags)) : -1
 
         if (index >= 0) {
-            targetQueue[index] = task
+            queue[index] = task
         } else {
-            targetQueue.unshift(task)
+            queue.unshift(task)
         }
         return task
     }
@@ -106,3 +118,5 @@ export class Tasker {
         this._locked = false;
     }
 }
+
+export const tasker = new Tasker({ rate: (featureLevel + 1) * 15 })

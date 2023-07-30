@@ -7,6 +7,16 @@ import { Block, BlockManager, BlockShape, blockManager } from "./blocks"
 import { isMobileDevice } from "./utils"
 import { WorldManager } from "./world"
 
+export enum FeatureLevel {
+    Low,
+    Mid,
+    High
+}
+
+export let featureLevel = isMobileDevice() ? FeatureLevel.Low : FeatureLevel.Mid
+// featureLevel = FeatureLevel.Low
+
+
 interface IAppState {
     maxChunksInMemory: number
     seed: number,
@@ -29,11 +39,10 @@ interface IAppState {
 export const state: IAppState = {
     maxChunksInMemory: 512,
     seed: 1,
-    chunkSize: 10,
-    // drawChunks: isMobileDevice() ? 2 : 1,
-    drawChunks: 3,
+    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
+    drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
     blockShape: BlockShape.Prism6,
-    worldHeight: 10,
+    worldHeight: 12,
     camera: null,
     scene: null,
     renderer: null,
