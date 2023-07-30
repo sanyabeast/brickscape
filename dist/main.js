@@ -17876,13 +17876,12 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   GenerationHelper: () => (/* binding */ GenerationHelper),
 /* harmony export */   SeededRandom: () => (/* binding */ SeededRandom),
-/* harmony export */   Sine: () => (/* binding */ Sine),
-/* harmony export */   VoxelWorldGenerator: () => (/* binding */ VoxelWorldGenerator)
+/* harmony export */   generationHelper: () => (/* binding */ generationHelper)
 /* harmony export */ });
 /* harmony import */ var _leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @leodeslf/perlin-noise */ "./node_modules/@leodeslf/perlin-noise/perlin.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
 
 
 function SeededRandom(seed) {
@@ -17895,59 +17894,55 @@ function SeededRandom(seed) {
         return seed / m;
     };
 }
-class Sine {
-    constructor(seed) {
-        this.seed = null;
-        this.seed = seed;
-    }
-    getSineNoise({ x, y, scale = 1, iterations = 2 }) {
-        let val = 0;
-        for (let i = 0; i < iterations; i++) {
-            let iterationDivider = i + 1;
-            let a = (Math.sin(x * (scale * iterationDivider)) + 1) / 2;
-            let b = (Math.sin(y * (scale * iterationDivider)) + 1) / 2;
-            val += (a * b);
-        }
-        return (0,lodash__WEBPACK_IMPORTED_MODULE_1__.clamp)(val / iterations, 0, 1);
-    }
-}
-class VoxelWorldGenerator {
+class GenerationHelper {
     ;
     constructor(seed) {
         this.seed = null;
-        this.sine = null;
         this._seededRandom = null;
         this.seed = seed;
         this._seededRandom = SeededRandom(seed);
-        this.sine = new Sine(seed);
     }
     random() {
         return this._seededRandom();
     }
-    getPerlin3DNoise({ x, y, iterations = 4 }) {
-        let val = 0;
-        for (let i = 0; i < iterations; i++) {
-            const stepScale = 10 * Math.pow(2, i);
-            const valueScale = 1 + Math.pow(2, i);
-            val = (val + Math.abs((0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin3D)(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2;
-        }
-        val /= (iterations / 2);
-        return (0,lodash__WEBPACK_IMPORTED_MODULE_1__.clamp)(val, 0, 1);
+    dice(bias = 0.5) {
+        return this.random() > bias;
     }
-    getPerlin4DNoise({ x, y, z, iterations = 4 }) {
+    // getPerlin3DNoise(x, y, z, params: IBlockCreationSourceParams) {
+    //     let val = 0;
+    //     for (let i = 0; i < params.iterations; i++) {
+    //         const stepScale = 10 * Math.pow(2, i);
+    //         const valueScale = 1 + Math.pow(2, i);
+    //         val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
+    //     }
+    //     val /= (params.iterations / 100)
+    //     val = clamp(val, 0, 1);
+    //     console.log(val)
+    //     return val
+    // }
+    getPerlin3DNoise(x, y, z, params) {
         let val = 0;
-        for (let i = 0; i < iterations; i++) {
-            const stepScale = 10 * Math.pow(2, i);
-            const valueScale = 1 + Math.pow(2, i);
-            val = (val + Math.abs((0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin4D)(x / stepScale, y / stepScale, z / stepScale, this.seed / stepScale) * valueScale)) / 2;
+        for (let i = 0; i < params.paramA; i++) {
+            let iterationVal = (0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin3D)(x * params.paramB * (i + 1), y * params.paramB * (i + 1), (this.seed + params.paramD) * params.paramB * (i + 1)) * params.paramC;
+            iterationVal = (iterationVal + 0.5);
+            val += iterationVal;
         }
-        val /= (iterations);
-        return (0,lodash__WEBPACK_IMPORTED_MODULE_1__.clamp)(val, 0, 1);
+        val /= params.paramA;
+        // console.log(val)
+        return val;
     }
-    getNoiseValue({ x, y, scale = 1, iterations = 2 }) {
-        return this.getPerlin3DNoise({ x, y });
+    getPerlin4DNoise(x, y, z, params) {
+        let val = 0;
+        for (let i = 0; i < params.paramA; i++) {
+            let iterationVal = (0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin4D)(x * params.paramB * (i + 1), y * params.paramB * (i + 1), z * params.paramB * (i + 1), (this.seed + params.paramD) * params.paramB * (i + 1)) * params.paramC;
+            iterationVal = (iterationVal + 0.5);
+            val += iterationVal;
+        }
+        val /= params.paramA;
+        return val;
     }
 }
+const generationHelper = new GenerationHelper(_state__WEBPACK_IMPORTED_MODULE_1__.state.seed);
 
 
 /***/ }),
@@ -18179,6 +18174,199 @@ class MapManager extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
         this.children = this._activeChunks;
     }
 }
+
+
+/***/ }),
+
+/***/ "./src/rules.ts":
+/*!**********************!*\
+  !*** ./src/rules.ts ***!
+  \**********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   EBlockCreationSource: () => (/* binding */ EBlockCreationSource),
+/* harmony export */   EBlockReplacingStrategy: () => (/* binding */ EBlockReplacingStrategy),
+/* harmony export */   rules: () => (/* binding */ rules)
+/* harmony export */ });
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+
+
+var EBlockReplacingStrategy;
+(function (EBlockReplacingStrategy) {
+    EBlockReplacingStrategy[EBlockReplacingStrategy["DontReplace"] = 0] = "DontReplace";
+    EBlockReplacingStrategy[EBlockReplacingStrategy["Replace"] = 1] = "Replace";
+    EBlockReplacingStrategy[EBlockReplacingStrategy["OnlyReplace"] = 2] = "OnlyReplace";
+    EBlockReplacingStrategy[EBlockReplacingStrategy["Stack"] = 3] = "Stack";
+})(EBlockReplacingStrategy || (EBlockReplacingStrategy = {}));
+var EBlockCreationSource;
+(function (EBlockCreationSource) {
+    EBlockCreationSource[EBlockCreationSource["Constant"] = 0] = "Constant";
+    EBlockCreationSource[EBlockCreationSource["Perlin3D"] = 1] = "Perlin3D";
+    EBlockCreationSource[EBlockCreationSource["Perlin4D"] = 2] = "Perlin4D";
+})(EBlockCreationSource || (EBlockCreationSource = {}));
+function getSingleBlockStructure(blockType) {
+    return [{
+            blockType,
+            offset: [0, 0]
+        }];
+}
+const rules = [
+    // Bedrock
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Bedrock),
+        create: [
+            {
+                source: EBlockCreationSource.Constant,
+                ratio: 0.5,
+                replace: EBlockReplacingStrategy.Replace,
+                levels: [{
+                        min: 0,
+                        max: 1
+                    }],
+                params: {}
+            }
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.4,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                        min: 0,
+                        max: 4
+                    }],
+                params: { paramA: 4, paramB: 0.003, paramC: 1, paramD: 0 }
+            },
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.3,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                        min: 0,
+                        max: 4
+                    }],
+                params: { paramA: 6, paramB: 0.01, paramC: 1, paramD: 0 }
+            }
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.25,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                        min: 2,
+                        max: 8
+                    }],
+                params: { paramA: 6, paramB: 0.008, paramC: 1, paramD: 1214 }
+            },
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.25,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                        min: 2,
+                        max: 6
+                    }],
+                params: { paramA: 6, paramB: 0.02, paramC: 1, paramD: 123 }
+            }
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.5,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                        min: 8,
+                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                    }],
+                params: { paramA: 4, paramB: 0.002, paramC: 1, paramD: 665 }
+            }
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Sand),
+        create: [
+            {
+                source: EBlockCreationSource.Constant,
+                ratio: 0.5,
+                replace: EBlockReplacingStrategy.OnlyReplace,
+                levels: [{
+                        min: 4,
+                        max: 5
+                    }],
+                params: {}
+            }
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Water),
+        create: [
+            {
+                source: EBlockCreationSource.Constant,
+                ratio: 0.5,
+                replace: EBlockReplacingStrategy.DontReplace,
+                levels: [{
+                        min: 3,
+                        max: 4
+                    }],
+                params: {}
+            }
+        ]
+    },
+    {
+        structure: [
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [0, 0] },
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [1, 0] },
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [0, 1] },
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [1, 1] },
+        ],
+        create: [
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.2,
+                replace: EBlockReplacingStrategy.OnlyReplace,
+                levels: [{
+                        min: 6,
+                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                    }],
+                params: { paramA: 4, paramB: 0.4, paramC: 1, paramD: 212 }
+            }
+        ]
+    },
+    {
+        structure: [
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel, offset: [0, 0] },
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [1, 0] },
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Sand, offset: [0, 1] },
+            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt, offset: [1, 1] },
+        ],
+        create: [
+            {
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 0.4,
+                replace: EBlockReplacingStrategy.OnlyReplace,
+                levels: [{
+                        min: 5,
+                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight / 2
+                    }],
+                params: { paramA: 4, paramB: 0.4, paramC: 1, paramD: 115 }
+            }
+        ]
+    },
+];
 
 
 /***/ }),
@@ -18701,9 +18889,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   worldManager: () => (/* binding */ worldManager)
 /* harmony export */ });
 /* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
-/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
-/* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+/* harmony import */ var _generator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./generator */ "./src/generator.ts");
+/* harmony import */ var _rules__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./rules */ "./src/rules.ts");
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+
+
 
 
 
@@ -18725,38 +18917,137 @@ class WorldManager {
         this._chunksGeneratedStatus = {};
     }
     checkChunkGeneration(cx, cz) {
-        let chunkId = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getChunkId)(cx, cz);
+        let chunkId = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.getChunkId)(cx, cz);
         if (this._chunksGeneratedStatus[chunkId] === undefined) {
             this._chunksGeneratedStatus[chunkId] = false;
-            _tasker__WEBPACK_IMPORTED_MODULE_2__.tasker.add((done) => {
-                this._generateChunk(cx, cz);
+            _tasker__WEBPACK_IMPORTED_MODULE_4__.tasker.add((done) => {
+                this._genrateChunkWithRules(cx, cz);
                 this._chunksGeneratedStatus[chunkId] = true;
                 done();
-            }, ['world', 'generate', (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getChunkId)(cx, cz)], _tasker__WEBPACK_IMPORTED_MODULE_2__.QueueType.Normal);
-            _tasker__WEBPACK_IMPORTED_MODULE_2__.tasker.add((done) => {
+            }, ['world', 'generate', (0,_utils__WEBPACK_IMPORTED_MODULE_5__.getChunkId)(cx, cz)], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Normal);
+            _tasker__WEBPACK_IMPORTED_MODULE_4__.tasker.add((done) => {
                 this._updateChunkLighting(cx, cz);
                 done();
-            }, ['world', 'generate', 'shading', (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getChunkId)(cx, cz)], _tasker__WEBPACK_IMPORTED_MODULE_2__.QueueType.Post, false);
+            }, ['world', 'generate', 'shading', (0,_utils__WEBPACK_IMPORTED_MODULE_5__.getChunkId)(cx, cz)], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Post, false);
             return false;
         }
         else {
-            _tasker__WEBPACK_IMPORTED_MODULE_2__.tasker.add((done) => {
+            _tasker__WEBPACK_IMPORTED_MODULE_4__.tasker.add((done) => {
                 this._updateChunkLighting(cx, cz);
                 done();
-            }, ['world', 'generate', 'shading', (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getChunkId)(cx, cz)], _tasker__WEBPACK_IMPORTED_MODULE_2__.QueueType.Post, false);
+            }, ['world', 'generate', 'shading', (0,_utils__WEBPACK_IMPORTED_MODULE_5__.getChunkId)(cx, cz)], _tasker__WEBPACK_IMPORTED_MODULE_4__.QueueType.Post, false);
             return true;
         }
     }
     cancel() {
-        _tasker__WEBPACK_IMPORTED_MODULE_2__.tasker.flush(['world', 'generate']);
+        _tasker__WEBPACK_IMPORTED_MODULE_4__.tasker.flush(['world', 'generate']);
         for (let k in this._chunksGeneratedStatus) {
             if (this._chunksGeneratedStatus[k] === false) {
                 this._chunksGeneratedStatus[k] = undefined;
             }
         }
     }
+    _genrateChunkWithRules(cx, cz) {
+        _rules__WEBPACK_IMPORTED_MODULE_2__.rules.forEach((rule, index) => {
+            for (let ir = 0; ir < rule.create.length; ir++) {
+                let creationRule = rule.create[ir];
+                _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
+                    if (this._testLevels(y, creationRule.levels)) {
+                        if (this._testCreationRule(x, y, z, creationRule)) {
+                            this._placeStructure(x, y, z, rule.structure, creationRule.replace);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    _placeStructure(x, y, z, structure, replaceStrategy) {
+        structure.forEach((placement, index) => {
+            this._placeBlock(x + placement.offset[0], y + placement.offset[1], z + placement.offset[1], placement.blockType, replaceStrategy);
+        });
+    }
+    _placeBlock(x, y, z, blockType, replaceStrategy) {
+        // console.log(x, y, z)
+        switch (replaceStrategy) {
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockReplacingStrategy.Replace: {
+                new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
+                    chunk: this,
+                    x: x,
+                    y: y,
+                    z: z,
+                    lightness: 1,
+                    blockType: blockType
+                });
+            }
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockReplacingStrategy.DontReplace: {
+                if (!_blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getBlockAt(x, y, z)) {
+                    new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
+                        chunk: this,
+                        x: x,
+                        y: y,
+                        z: z,
+                        lightness: 1,
+                        blockType: blockType
+                    });
+                }
+                break;
+            }
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockReplacingStrategy.OnlyReplace: {
+                if (_blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getBlockAt(x, y, z)) {
+                    new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
+                        chunk: this,
+                        x: x,
+                        y: y,
+                        z: z,
+                        lightness: 1,
+                        blockType: blockType
+                    });
+                }
+                break;
+            }
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockReplacingStrategy.Stack: {
+                let elevation = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z);
+                if (elevation < _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight) {
+                    new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
+                        chunk: this,
+                        x: x,
+                        y: elevation + 1,
+                        z: z,
+                        lightness: 1,
+                        blockType: blockType
+                    });
+                }
+                break;
+            }
+        }
+    }
+    _testLevels(y, levels) {
+        for (let i = 0; i < levels.length; i++) {
+            let level = levels[i];
+            if (y >= level.min && y < level.max) {
+                return true;
+            }
+        }
+        return false;
+    }
+    _testCreationRule(x, y, z, creationRule) {
+        switch (creationRule.source) {
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Perlin3D: {
+                return _generator__WEBPACK_IMPORTED_MODULE_1__.generationHelper.getPerlin3DNoise(x, z, null, creationRule.params) < creationRule.ratio;
+            }
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Perlin4D: {
+                return _generator__WEBPACK_IMPORTED_MODULE_1__.generationHelper.getPerlin4DNoise(x, z, y, creationRule.params) < creationRule.ratio;
+            }
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Constant: {
+                return true;
+            }
+            default: {
+                return false;
+            }
+        }
+    }
     _generateChunk(cx, cz) {
-        (0,_utils__WEBPACK_IMPORTED_MODULE_3__.logd)('WorldManager._generateChunk', `start generating at [${cx}, ${cz}]`);
+        (0,_utils__WEBPACK_IMPORTED_MODULE_5__.logd)('WorldManager._generateChunk', `start generating at [${cx}, ${cz}]`);
         // bedrock level
         _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk2D(cx, cz, (x, z) => {
             new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
@@ -18770,13 +19061,10 @@ class WorldManager {
         });
         // main perlin noise
         _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            let noiseValue = _state__WEBPACK_IMPORTED_MODULE_1__.state.generator.getNoiseValue({
-                x: x,
-                y: z,
-                scale: 0.01,
-                iterations: 32
+            let noiseValue = _state__WEBPACK_IMPORTED_MODULE_3__.state.generator.getPerlin3DNoise(x, z, null, {
+                paramA: 4
             });
-            let heightValue = Math.floor(_state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight * noiseValue) + 1;
+            let heightValue = Math.floor(_state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight * noiseValue) + 1;
             for (let i = 1; i < heightValue - 1; i++) {
                 new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
                     chunk: this,
@@ -18842,7 +19130,7 @@ class WorldManager {
                             shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5);
                             shadingFactor /= 4;
                         }
-                        lightness *= (0,_utils__WEBPACK_IMPORTED_MODULE_3__.lerp)(1, 0.95, shadingFactor);
+                        lightness *= (0,_utils__WEBPACK_IMPORTED_MODULE_5__.lerp)(1, 0.95, shadingFactor);
                     }
                 });
                 let blockChanged = block.update({
@@ -80784,7 +81072,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 function main() {
-    _state__WEBPACK_IMPORTED_MODULE_3__.state.generator = new _generator__WEBPACK_IMPORTED_MODULE_5__.VoxelWorldGenerator(_state__WEBPACK_IMPORTED_MODULE_3__.state.seed);
+    _state__WEBPACK_IMPORTED_MODULE_3__.state.generator = _generator__WEBPACK_IMPORTED_MODULE_5__.generationHelper;
     _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker = _tasker__WEBPACK_IMPORTED_MODULE_6__.tasker;
     _state__WEBPACK_IMPORTED_MODULE_3__.state.world = _world__WEBPACK_IMPORTED_MODULE_7__.worldManager;
     _state__WEBPACK_IMPORTED_MODULE_3__.state.blockManager = _blocks__WEBPACK_IMPORTED_MODULE_8__.blockManager;
