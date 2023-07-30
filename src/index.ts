@@ -1,17 +1,21 @@
 import { PerspectiveCamera, WebGLRenderer, Scene } from 'three';
 import { VoxelMapControls } from './controls';
-import { WorldManager } from './world';
+import { MapManager } from './map';
 import { createGui } from './gui';
 import { state } from './state'
 import { Environment } from './environment';
 import { VoxelWorldGenerator } from './generator';
 import { Tasker } from './tasker';
+import { WorldManager, worldManager } from './world';
+import { BlockManager } from './blocks';
 
 
 function main() {
 
     state.generator = new VoxelWorldGenerator(state.seed)
     state.tasker = new Tasker({ rate: 30 })
+    state.world = WorldManager.getInstance()
+    state.blockManager = BlockManager.getInstance()
 
     const pixelRatio = window.devicePixelRatio
     const fov = 89;
@@ -37,8 +41,8 @@ function main() {
     // CONTROLS
     let controls = state.controls = new VoxelMapControls(camera, renderer.domElement)
     controls.screenSpacePanning = false;
-    controls.minDistance = 15;
-    controls.maxDistance = 100;
+    controls.minDistance = 20;
+    controls.maxDistance = 50;
     controls.maxPolarAngle = (Math.PI / 2.5);
     controls.maxPolarAngle = (Math.PI);
     controls.enableDamping = true
@@ -46,7 +50,7 @@ function main() {
     controls.panSpeed = 0.75
 
     // MAP
-    const map = state.map = new WorldManager({
+    const map = state.map = new MapManager({
         camera
     })
 

@@ -12,24 +12,17 @@ export declare class Task {
     match(tags: String[]): boolean;
     cancel(): void;
 }
-export declare enum QueueType {
-    Normal = 0,
-    Reversed = 1,
-    Random = 2
-}
 export declare class Tasker {
-    _normalQueue: Task[];
-    _reversedQueue: Task[];
-    _randomQueue: Task[];
+    _queue: Task[];
     _running: boolean;
     _locked: boolean;
     constructor({ rate }: {
         rate: any;
     });
     tick(): void;
-    add(runner: TaskFunction, tags: String[], type?: QueueType, replaceMatch?: boolean): Task;
+    flush(tags?: String[]): void;
+    add(runner: TaskFunction, tags: String[], replaceMatch?: boolean): Task;
     start(): void;
     stop(): void;
-    flush(tags?: String[]): void;
     _done(): void;
 }

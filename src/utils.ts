@@ -1,5 +1,18 @@
 import { Object3D } from "three";
 
+function stringToSeed(str) {
+    let seed = 0;
+    for (let i = 0; i < str.length; i++) {
+        seed = (seed * 31 + str.charCodeAt(i)) & 0xFFFFFFFF;
+    }
+    return seed;
+}
+
+function getRandomColorFromStringSeed(str) {
+    const seed = stringToSeed(str);
+    const randomColor = `#${(seed & 0xFFFFFF).toString(16).padStart(6, '0')}`;
+    return randomColor;
+}
 
 export function getNearestMultiple(num: number, div: number = 1) {
     return Math.floor(num / div) * div
@@ -14,9 +27,8 @@ export function lerp(start: number, end: number, t: number): number {
 }
 
 export function logd(tag: string, ...args: any[]) {
-    console.log(`[voxelworld] ${tag} [i]: `, ...args)
+    console.log(`%c[voxelworld] ${tag} [i]: `, `color: ${getRandomColorFromStringSeed(tag)}`, ...args)
 }
-
 
 export function getChunkId(cx: number, cz: number): string {
     return `${cx}_${cz}`

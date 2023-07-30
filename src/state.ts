@@ -2,9 +2,10 @@ import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
 import { VoxelWorldGenerator } from "./generator"
 import { VoxelMapControls as VoxelWorldControls } from "./controls"
 import { Tasker } from "./tasker"
-import { WorldManager } from "./world"
-import { Block, BlockShape } from "./blocks"
+import { MapManager } from "./map"
+import { Block, BlockManager, BlockShape, blockManager } from "./blocks"
 import { isMobileDevice } from "./utils"
+import { WorldManager } from "./world"
 
 interface IAppState {
     maxChunksInMemory: number
@@ -13,7 +14,7 @@ interface IAppState {
     drawChunks: number
     blockShape: BlockShape
     worldHeight: number
-    map: WorldManager
+    map: MapManager
     controls: VoxelWorldControls
     canvas: HTMLCanvasElement
     camera: PerspectiveCamera
@@ -21,14 +22,17 @@ interface IAppState {
     renderer: WebGLRenderer
     generator: VoxelWorldGenerator,
     tasker: Tasker
+    world: WorldManager
+    blockManager: BlockManager
 }
 
 export const state: IAppState = {
     maxChunksInMemory: 512,
     seed: 1,
-    chunkSize: isMobileDevice() ? 8 : 10,
-    drawChunks: isMobileDevice() ? 1 : 3,
-    blockShape: BlockShape.Cube,
+    chunkSize: 10,
+    // drawChunks: isMobileDevice() ? 2 : 1,
+    drawChunks: 3,
+    blockShape: BlockShape.Prism6,
     worldHeight: 10,
     camera: null,
     scene: null,
@@ -37,5 +41,7 @@ export const state: IAppState = {
     map: null,
     canvas: null,
     generator: null,
-    tasker: null
+    tasker: null,
+    world: null,
+    blockManager: null
 }

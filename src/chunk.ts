@@ -1,352 +1,205 @@
-import { Group, InstancedMesh, InstancedBufferGeometry, InstancedBufferAttribute, Object3D, Material } from "three"
-import { getChunkId, lerp } from "./utils"
+import { Group, InstancedMesh, InstancedBufferGeometry, InstancedBufferAttribute, Object3D, Material, GridHelper } from "three"
+import { logd } from "./utils"
 import { state } from "./state"
-import { debounce, throttle } from "lodash"
 import { VoxelBlockStandardMaterial } from "./shaders"
-import { QueueType, Task } from "./tasker"
-import { Block, BlockShape, BlockType, BlockManager } from "./blocks"
+import { Task } from "./tasker"
+import { Block, BlockShape, blockManager } from "./blocks"
+import { worldManager } from "./world"
+import { monitoringData } from "./gui"
+import { debounce } from "lodash"
 
 
-let _chunksCounter = 0;
-
-
-let _instancedMesh = null
-let _blockMaterial: Material = null
-
-
-function _createInstancedMesh(): InstancedMesh {
-    if (_instancedMesh === null) {
-        const _instancedBlockGeometry = new InstancedBufferGeometry().copy(Block.getShapeGeometry());
-        const _instanceDataArray = new Float32Array(BlockManager.maxBlocksPerChunk * 3)
-        const _instanceDataAttribute = new InstancedBufferAttribute(_instanceDataArray, 3);
-
-        const _instanceVisibilityArray = new Float32Array(BlockManager.maxBlocksPerChunk)
-        const _instanceVisibilityAttribute = new InstancedBufferAttribute(_instanceVisibilityArray, 1);
-
-        _blockMaterial = _blockMaterial || new VoxelBlockStandardMaterial({ color: 0xFFFFFF, maxInstances: BlockManager.maxBlocksPerChunk, state })
-
-        for (let i = 0; i < BlockManager.maxBlocksPerChunk; i++) {
-            _instanceDataAttribute.setXYZ(i, 0, 0, 1);
-            _instanceVisibilityAttribute.setX(i, 0)
-        }
-
-        _instancedBlockGeometry.setAttribute('instanceData', _instanceDataAttribute);
-        _instancedBlockGeometry.setAttribute('instanceVisibility', _instanceVisibilityAttribute);
-
-        _instancedMesh = new InstancedMesh(_instancedBlockGeometry, _blockMaterial, BlockManager.maxBlocksPerChunk);
-
-        for (let x = 0; x < state.chunkSize; x++) {
-            for (let z = 0; z < state.chunkSize; z++) {
-                for (let y = 0; y < state.worldHeight; y++) {
-                    let dummy = new Object3D()
-
-                    switch (state.blockShape) {
-                        case BlockShape.Prism6: {
-                            let dx = x
-                            if (z % 2 == 0) {
-                                dx += 0.5
-                            }
-                            dummy.position.set(dx, y, z)
-                            break;
-                        }
-                        default: {
-                            dummy.position.set(x, y, z)
-                        }
-                    }
-                    dummy.updateMatrix()
-                    _instancedMesh.setMatrixAt(BlockManager.getInstanceIndex(x, y, z), dummy.matrix)
-                }
-            }
-        }
-
-        _instancedMesh.matrixAutoUpdate = false
-        _instancedMesh.updateMatrix()
-        return _instancedMesh
-    } else {
-
-        let clonedInstancedMesh = _instancedMesh.clone()
-        clonedInstancedMesh.geometry = _instancedMesh.geometry.clone()
-
-        clonedInstancedMesh.matrixAutoUpdate = false
-        clonedInstancedMesh.updateMatrix()
-        return clonedInstancedMesh
-    }
-}
-
+const _chunkPool: Chunk[] = []
+const _chunkPoolLimit = 128
 
 export class Chunk extends Group {
-    cid: string = null
+
+    static _chunksCounter = 0;
+    static _baseInstancedMesh = null
+    static _baseBlockMaterial: Material = null
+
     cx: number = null
     cz: number = null
     serial: number = null
-    active: boolean = false
-    blocks: Block[] = null
-    instanced: InstancedMesh[] = null
     _buildTask: Task = null
     _built: boolean = false
     _instanceDataAttribute: InstancedBufferAttribute = null
     _instanceVisibilityAttribute: InstancedBufferAttribute = null
     _instancedMesh: InstancedMesh = null
-    _noiseTable: { [x: string]: number }
-    lastUpdate: number = 0
+    _gridHelper: GridHelper
 
-    get age() {
-        return (+new Date() - this.lastUpdate) / 1000
+    get bx0() {
+        return this.cx * state.chunkSize
+    }
+
+    get bz0() {
+        return this.cz * state.chunkSize
     }
 
     constructor({ cx, cz }) {
+        logd('Chunk', `new [${cx}, ${cz}]}`)
         super()
-        this.cx = cx
-        this.cz = cz
-        this.cid = getChunkId(cx, cz)
-        this.serial = _chunksCounter
-        _chunksCounter++
-        this.blocks = []
 
-        this._noiseTable = {}
-
-        this.position.set(cx * state.chunkSize, 0, cz * state.chunkSize)
+        this.serial = Chunk._chunksCounter
+        Chunk._chunksCounter++
         this.matrixAutoUpdate = false
 
-        this.visible = false
+        // instanced mesh
+        this._instancedMesh = Chunk._createInstancedMesh()
+        this._instanceDataAttribute = this._instancedMesh.geometry.attributes['instanceData'] as InstancedBufferAttribute
+        this._instanceVisibilityAttribute = this._instancedMesh.geometry.attributes['instanceVisibility'] as InstancedBufferAttribute
+        this.add(this._instancedMesh)
 
-        this._updateChunkMatrix = throttle(this._updateChunkMatrix.bind(this), 1000 / 15)
-        this.update = debounce(this.update.bind(this), 32)
-
-        this.update()
+        this._gridHelper = new GridHelper(state.chunkSize, state.chunkSize, 0x999999, 0x999999)
+        this._gridHelper.position.set(state.chunkSize / 2 - 0.5, 0, state.chunkSize / 2 - 0.5)
+        this.add(this._gridHelper)
+        this.setup(cx, cz)
+        this._updateGeometry = debounce(this._updateGeometry.bind(this), 1000)
     }
 
-    _initInstancedMesh() {
-
-        if (this._instancedMesh === null) {
-            this._instancedMesh = _createInstancedMesh()
-            this._instanceDataAttribute = this._instancedMesh.geometry.attributes['instanceData'] as InstancedBufferAttribute
-            this._instanceVisibilityAttribute = this._instancedMesh.geometry.attributes['instanceVisibility'] as InstancedBufferAttribute
-            this.add(this._instancedMesh)
-        }
+    sync() {
+        logd('Chunk.sync', this.toString())
+        this._updateGeometry(true)
     }
 
-    update() {
-        if (!this._built) {
-            this._buildTask = state.tasker.add((done) => {
-                this._built = true
-                this._buildTask = null
-
-                this._initInstancedMesh()
-                this._buildChunk()
-                this.updateChunk()
-
-                this._updateChunkMatrix()
-                this.visible = true
-
-                done()
-            }, ['chunk', this.cid], QueueType.Reversed)
-        } else {
-            this.updateChunk()
-        }
-
-    }
-
-    _buildChunk() {
-        // bedrock level
-        this._iterateChunkGridXZ((x, z) => {
-            new Block({
-                chunk: this,
-                x: x,
-                y: 0,
-                z: z,
-                lightness: 1,
-                blockType: BlockType.Bedrock
-            })
-        })
-
-        // main perlin noise
-        this._iterateChunkGridXZ((x, z) => {
-            let noiseValue = state.generator.getNoiseValue({
-                x: x,
-                y: z,
-                scale: 0.01,
-                iterations: 32
-            })
-
-            let heightValue = Math.floor(state.worldHeight * noiseValue) + 1
-
-            for (let i = 1; i < heightValue - 1; i++) {
-                new Block({
-                    chunk: this,
-                    x: x,
-                    y: i,
-                    z: z,
-                    lightness: 1,
-                    blockType: BlockType.None
-                })
-            }
-        })
-
-        // watering
-
-        let waterLevel = 2
-
-        this._iterateChunkGridXZ((x, z) => {
-            let existingBlock = BlockManager.getBlockAt(x, waterLevel, z)
-            if (!existingBlock) {
-                new Block({
-                    chunk: this,
-                    x: x,
-                    y: waterLevel,
-                    z: z,
-                    lightness: 1,
-                    blockType: BlockType.Water
-                })
-            }
-        })
-    }
-
-    updateChunk() {
-        // console.log(`updating blocks at ${this.toString()}...`)
-        if (this._built) {
-            let outdatetBlocksCount = this._getOutdatedBlocksCount();
-
-            if (outdatetBlocksCount > 0) {
-                let shadingChanged = this._updateBlocksShading()
-                let blockTypesChanged = this._updateBlocksTypes();
-
-                if (shadingChanged || blockTypesChanged) {
-                    this._updateInstancedAttributes()
+    _updateGeometry(updateAttrs: boolean = false) {
+        if (updateAttrs) {
+            logd('Chunk._updateGeometry', `updating attributes at [${this.cx}, ${this.cz}]`)
+            let _blocksInChunk = 0
+            blockManager.traverseChunk(this.cx, this.cz, (x, y, z, block) => {
+                let instanceIndex = this._computedInstanceIndex(x, y, z);
+                if (block) {
+                    _blocksInChunk++
+                    this._instanceVisibilityAttribute.setX(instanceIndex, 1)
+                    this._instanceDataAttribute.setXYZ(instanceIndex, block.tileX, block.tileY, block.lightness)
                 } else {
-                    // console.log(`chunk have not changed since last update`)
+                    this._instanceVisibilityAttribute.setX(instanceIndex, 0)
                 }
+            })
 
-                this._markBlocksUpdated()
+            this._instanceVisibilityAttribute.needsUpdate = true
+            this._instanceDataAttribute.needsUpdate = true
 
-                this.lastUpdate = +new Date()
-            } else {
-                // console.log(`no outdated blocks`)
-            }
+            logd('Chunk._updateGeometry', `blocks in chunk [${this.cx}, ${this.cz}] - ${_blocksInChunk}`)
         }
-    }
 
-    _getOutdatedBlocksCount(): number {
-        let i = 0;
-        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
-            if (block && block.needsUpdate) {
-                i++
-            }
-        })
-        return i
-    }
-
-    _markBlocksUpdated(): void {
-        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
-            if (block) {
-                block.needsUpdate = false
-            }
-        })
-    }
-
-    _updateChunkMatrix() {
         this._instancedMesh.instanceMatrix.needsUpdate = true
         this.updateMatrix()
     }
 
-    _updateBlocksTypes(): boolean {
-        let changed = false
-        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
-            if (block) {
-                if (block.btype === BlockType.None) {
-                    let blockType = BlockType.Dirt;
-                    if (block.by < 8 && Math.random() > 0.8) {
-                        blockType = BlockType.Rock
-                    } else if (block.by < 6 && Math.random() > 0.9) {
-                        blockType = BlockType.Gravel
-                    } else if (block.by < 6) {
-                        blockType = BlockType.Sand
-                    }
-
-                    let blockChanged = block.update({
-                        lightness: block.lightness,
-                        blockType
-                    })
-
-                    changed = changed || blockChanged
-                }
-            }
-        })
-        return changed
+    _computedInstanceIndex(x, y, z): number {
+        return Chunk.computedInstanceIndex(this.bx0, this.bz0, x, y, z)
     }
 
-    _updateBlocksShading() {
-        let changed = false
-        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
-            if (block) {
-                let lightness = 1
-                let sibDistance = 2
-                block.iterateSiblings(sibDistance, (dx, dy, dz, block) => {
-                    if (block) {
-                        let shadingFactor = 0
-                        if (dy >= 1) {
-                            shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5)
-                            shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5)
-                            shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5)
-                            shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5)
-                            shadingFactor /= 4
-                        }
-                        lightness *= lerp(1, 0.95, shadingFactor);
-                    }
-                })
-
-                let blockChanged = block.update({
-                    lightness,
-                    blockType: block.btype
-                })
-
-                changed = changed || blockChanged
-            }
-        })
-        return changed
-    }
-
-
-    _updateInstancedAttributes() {
-        this._iterateChunkGrid((x, y, z, instanceIndex, block) => {
-            if (block) {
-                this._instanceVisibilityAttribute.setX(instanceIndex, 1)
-                this._instanceDataAttribute.setXYZ(instanceIndex, block.tileX, block.tileY, block.lightness)
-            } else {
-                this._instanceVisibilityAttribute.setX(instanceIndex, 0)
-            }
-        })
-
-        this._instanceDataAttribute.needsUpdate = true
-    }
-
-
-    _iterateChunkGrid(iteratee) {
-        BlockManager.iterateGrid(this.cx * state.chunkSize, 0, this.cz * state.chunkSize, this.cx * state.chunkSize + state.chunkSize, 0, this.cz * state.chunkSize + state.chunkSize, iteratee)
-    }
-
-    _iterateChunkGridXZ(iteratee) {
-        BlockManager.iterateGridXZ(this.cx * state.chunkSize, this.cz * state.chunkSize, this.cx * state.chunkSize + state.chunkSize, this.cz * state.chunkSize + state.chunkSize, iteratee)
-    }
 
     kill() {
-        this.cancel()
-
         if (this._instancedMesh) {
             this._instancedMesh.geometry.dispose()
         }
     }
 
+    setup(cx: number, cz: number) {
+        let isWorldReady = worldManager.checkChunkGeneration(cx, cz)
+        this.cx = cx
+        this.cz = cz
+        this.position.set(this.bx0, 0, this.bz0)
 
-    cancel() {
-        if (this._buildTask) {
-            this._buildTask.cancel()
-            this._buildTask = null
+        if (isWorldReady) {
+            this.sync()
+        } else {
+            this._updateGeometry(true)
         }
     }
-
 
     override toString() {
         return `Chunk(cx=${this.cx}, cz=${this.cz})`
     }
+
+    static computedInstanceIndex(bx0, bz0, x, y, z): number {
+        return Math.floor((x - bx0) + state.chunkSize * (y + state.worldHeight * (z - bz0)))
+    }
+
+    static load(cx: number, cz: number) {
+        let chunk: Chunk = _chunkPool.pop()
+        if (chunk === undefined) {
+            chunk = new Chunk({ cx, cz })
+            logd('Chunk:load    ', `loading new chunk ${chunk.toString()}`)
+        } else {
+            chunk.setup(cx, cz)
+            logd('Chunk:load', `loading from pool ${chunk.toString()}`)
+        }
+
+        monitoringData.chunksPoolSize = _chunkPool.length.toString()
+        return chunk
+    }
+
+    static unload(chunk: Chunk) {
+        if (_chunkPool.length < _chunkPoolLimit) {
+            logd('Chunk:unload', `unloading to pool ${chunk.toString()}`)
+            _chunkPool.push(chunk)
+        }
+
+        monitoringData.chunksPoolSize = _chunkPool.length.toString()
+    }
+
+    static _createInstancedMesh(): InstancedMesh {
+        if (Chunk._baseInstancedMesh === null) {
+            const _instancedBlockGeometry = new InstancedBufferGeometry().copy(Block.getShapeGeometry());
+            const _instanceDataArray = new Float32Array(blockManager.maxBlocksPerChunk * 3)
+            const _instanceDataAttribute = new InstancedBufferAttribute(_instanceDataArray, 3);
+
+            const _instanceVisibilityArray = new Float32Array(blockManager.maxBlocksPerChunk)
+            const _instanceVisibilityAttribute = new InstancedBufferAttribute(_instanceVisibilityArray, 1);
+
+            Chunk._baseBlockMaterial = Chunk._baseBlockMaterial || new VoxelBlockStandardMaterial({ color: 0xFFFFFF, maxInstances: blockManager.maxBlocksPerChunk, state })
+
+            for (let i = 0; i < blockManager.maxBlocksPerChunk; i++) {
+                _instanceDataAttribute.setXYZ(i, 0, 0, 1);
+                _instanceVisibilityAttribute.setX(i, 0)
+            }
+
+            _instancedBlockGeometry.setAttribute('instanceData', _instanceDataAttribute);
+            _instancedBlockGeometry.setAttribute('instanceVisibility', _instanceVisibilityAttribute);
+
+            Chunk._baseInstancedMesh = new InstancedMesh(_instancedBlockGeometry, Chunk._baseBlockMaterial, blockManager.maxBlocksPerChunk);
+
+            for (let x = 0; x < state.chunkSize; x++) {
+                for (let z = 0; z < state.chunkSize; z++) {
+                    for (let y = 0; y < state.worldHeight; y++) {
+                        let dummy = new Object3D()
+
+                        switch (state.blockShape) {
+                            case BlockShape.Prism6: {
+                                let dx = x
+                                if (z % 2 == 0) {
+                                    dx += 0.5
+                                }
+                                dummy.position.set(dx, y, z)
+                                break;
+                            }
+                            default: {
+                                dummy.position.set(x, y, z)
+                            }
+                        }
+                        dummy.updateMatrix()
+                        Chunk._baseInstancedMesh.setMatrixAt(Chunk.computedInstanceIndex(0, 0, x, y, z), dummy.matrix)
+                    }
+                }
+            }
+
+            Chunk._baseInstancedMesh.matrixAutoUpdate = false
+            Chunk._baseInstancedMesh.updateMatrix()
+            return Chunk._createInstancedMesh()
+        } else {
+
+            let clonedInstancedMesh = Chunk._baseInstancedMesh.clone()
+            clonedInstancedMesh.geometry = Chunk._baseInstancedMesh.geometry.clone()
+
+            clonedInstancedMesh.matrixAutoUpdate = false
+            clonedInstancedMesh.updateMatrix()
+
+            return clonedInstancedMesh
+        }
+    }
+
 }

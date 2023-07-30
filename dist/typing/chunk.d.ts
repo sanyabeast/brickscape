@@ -1,42 +1,32 @@
-import { Group, InstancedMesh, InstancedBufferAttribute } from "three";
+import { Group, InstancedMesh, InstancedBufferAttribute, Material, GridHelper } from "three";
 import { Task } from "./tasker";
-import { Block } from "./blocks";
-export type FChunkGridIteratee = (x: number, y: number, z: number, instanceIndex: number, block?: Block) => void;
-export type FChunkGridIterateeXZ = (x: number, z: number) => void;
 export declare class Chunk extends Group {
-    cid: string;
+    static _chunksCounter: number;
+    static _baseInstancedMesh: any;
+    static _baseBlockMaterial: Material;
     cx: number;
     cz: number;
     serial: number;
-    active: boolean;
-    blocks: Block[];
-    instanced: InstancedMesh[];
     _buildTask: Task;
     _built: boolean;
     _instanceDataAttribute: InstancedBufferAttribute;
     _instanceVisibilityAttribute: InstancedBufferAttribute;
     _instancedMesh: InstancedMesh;
-    _noiseTable: {
-        [x: string]: number;
-    };
-    lastUpdate: number;
-    get age(): number;
+    _gridHelper: GridHelper;
+    get bx0(): number;
+    get bz0(): number;
     constructor({ cx, cz }: {
         cx: any;
         cz: any;
     });
-    _initInstancedMesh(): void;
-    update(): void;
-    updateChunk(): void;
-    _getOutdatedBlocksCount(): number;
-    _updateChunkMatrix(): void;
-    _buildChunk(): void;
-    _updateBlocksTypes(): boolean;
-    _updateBlocksShading(): boolean;
-    _iterateChunkGrid(iteratee: FChunkGridIteratee): void;
-    _iterateChunkGridXZ(iteratee: FChunkGridIterateeXZ): void;
-    _updateInstancedAttributes(): void;
+    sync(): void;
+    _updateGeometry(updateAttrs?: boolean): void;
+    _computedInstanceIndex(x: any, y: any, z: any): number;
     kill(): void;
-    cancel(): void;
+    setup(cx: number, cz: number): void;
     toString(): string;
+    static computedInstanceIndex(bx0: any, bz0: any, x: any, y: any, z: any): number;
+    static load(cx: number, cz: number): Chunk;
+    static unload(chunk: Chunk): void;
+    static _createInstancedMesh(): InstancedMesh;
 }

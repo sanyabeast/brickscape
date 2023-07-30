@@ -1,14 +1,17 @@
 import { BoxGeometry, CylinderGeometry, InstancedBufferGeometry, Object3D } from "three"
 import { state } from "./state"
+import { Chunk } from "./chunk"
 
-const maxBlockAge = 10
 let _blocksCounter = 0
+let _blockManager: BlockManager = null
 
 export type FSiblingIteratee = (dx: number, dy: number, dz: number, sibling: Block) => void
 
-export type FBlocksGridIteratee = (x: number, y: number, z: number, instanceIndex: number, block?: Block) => void
+export type FBlocksGridIteratee = (x: number, y: number, z: number, block?: Block) => void
 export type FBlocksGridIterateeXZ = (x: number, z: number) => void
 
+export type FChunkGridIteratee = (x: number, y: number, z: number, block?: Block) => void
+export type FChunkGridIterateeXZ = (x: number, z: number) => void
 
 export enum BlockShape {
     Cube,
@@ -64,7 +67,9 @@ export class Block {
                 return g;
             }
             default: {
-                return new BoxGeometry(1, 1, 1) as any as InstancedBufferGeometry
+                let g = new BoxGeometry(1, 1, 1) as any as InstancedBufferGeometry
+                g.translate(0, 0.5, 0)
+                return g
             }
         }
     }
@@ -75,15 +80,11 @@ export class Block {
     bz: number = null
     bid: string = null
     btype: BlockType = BlockType.None
-    instanceIndex: number = null
+    // instanceIndex: number = null
     lightness: number = 1
-    lastUpdate: number = Math.random()
     serial: number = null
     needsUpdate: boolean = true
 
-    get age() {
-        return (+new Date() - this.lastUpdate) / 1000
-    }
     get tileX(): number {
         return blockTable[this.btype].tile[0]
     }
@@ -94,30 +95,25 @@ export class Block {
 
     constructor({ x, y, z, chunk, lightness, blockType }) {
 
-        if (BlockManager.getBlockAt(x, y, z)) {
-            // return BlocksManager.getBlockAt(x, y, z)
-        }
+        // if (_blockManager.getBlockAt(x, y, z)) {
+        //     // return BlocksManager.getBlockAt(x, y, z)
+        // }
 
         this.bx = x;
         this.by = y;
         this.bz = z;
-        this.bid = BlockManager.getBlockId(x, y, z);
+        this.bid = _blockManager.getBlockId(x, y, z);
 
         this.serial = _blocksCounter
         _blocksCounter++
 
-        this.instanceIndex = BlockManager.getInstanceIndex(
-            x - chunk.position.x, y - chunk.position.y, z - chunk.position.z
-        )
-
-        BlockManager.setBlock(this)
-
+        _blockManager.setBlock(this)
         this.update({ lightness, blockType })
-        this.lastUpdate = 0
+        this.needsUpdate = true
     }
 
     kill() {
-        delete BlockManager.blocks[this.bid]
+        delete _blockManager.blocks[this.bid]
     }
 
     iterateSiblings(distance: number = 1, iteratee: FSiblingIteratee) {
@@ -125,7 +121,7 @@ export class Block {
         for (let x = -distance; x <= distance; x++) {
             for (let y = -distance; y <= distance; y++) {
                 for (let z = -distance; z <= distance; z++) {
-                    iteratee(x, y, z, BlockManager.getBlockAt(x + this.bx, y + this.by, z + this.bz))
+                    iteratee(x, y, z, _blockManager.getBlockAt(x + this.bx, y + this.by, z + this.bz))
                 }
             }
         }
@@ -141,27 +137,41 @@ export class Block {
 
 
 export class BlockManager {
-    static blocks: {
+
+    static instance: BlockManager = null
+    static getInstance(): BlockManager {
+        if (BlockManager.instance === null) {
+            BlockManager.instance = new BlockManager()
+        }
+
+        return BlockManager.instance
+    }
+
+    blocks: {
         [x: string]: Block
     } = {}
 
-    static setBlock(block: Block): void {
-        BlockManager.blocks[block.bid] = block
+    constructor() {
+        _blockManager = this
     }
-    static removeBlock(block: Block) {
-        delete BlockManager.blocks[block.bid]
+
+    setBlock(block: Block): void {
+        this.blocks[block.bid] = block
     }
-    static getBlockAt(x: number, y: number, z: number): Block {
-        return BlockManager.blocks[BlockManager.getBlockId(x, y, z)]
+    removeBlock(block: Block) {
+        delete this.blocks[block.bid]
     }
-    static getBlockId(...args: number[]): string {
+    getBlockAt(x: number, y: number, z: number): Block {
+        return this.blocks[this.getBlockId(x, y, z)]
+    }
+    getBlockId(...args: number[]): string {
         return args.join('_')
     }
-    static getMostElevatedBlockAt(x: number, z: number): Block {
+    getMostElevatedBlockAt(x: number, z: number): Block {
         let r: Block = null
 
         for (let i = 0; i < state.worldHeight; i++) {
-            let b = BlockManager.getBlockAt(x, i, z)
+            let b = this.getBlockAt(x, i, z)
             if (b) {
                 r = b
             }
@@ -169,11 +179,11 @@ export class BlockManager {
 
         return r
     }
-    static getElevationAt(x: number, z: number): number {
+    getElevationAt(x: number, z: number): number {
         let r: number = 0
 
         for (let i = 0; i < state.worldHeight; i++) {
-            let b = BlockManager.getBlockAt(x, i, z)
+            let b = this.getBlockAt(x, i, z)
             if (b) {
                 r = i
             }
@@ -182,33 +192,22 @@ export class BlockManager {
         return r
     }
 
-    static getInstanceIndex(x, y, z): number {
-        return Math.floor(x + state.chunkSize * (y + state.worldHeight * z))
-        // let  index = 0;
-        // for (let ix = 0; ix < x; ix++){
-        //     for (let iz = 0; iz < z; iz++){
-        //         for (let iy = 0; iy < y; iy++){
-        //             index++
-        //         }
-        //     }
-        // }
-        // return index
-    }
-    static get maxBlocksPerChunk(): number {
+
+    get maxBlocksPerChunk(): number {
         return state.chunkSize * state.chunkSize * state.worldHeight
     }
 
-    static iterateGrid(fx: number, fy: number, fz: number, tx: number, ty: number, tz: number, iteratee: FBlocksGridIteratee) {
-        for (let z = fz; z < tz; z++) {
-            for (let x = fx; x < tx; x++) {
-                for (let y = fy; y < ty; y++) {
-                    iteratee(x, y, z, BlockManager.getInstanceIndex(x, y, z), BlockManager.getBlockAt(x, y, z))
-                }
-            }
-        }
-    }
+    // iterateGrid(fx: number, fy: number, fz: number, tx: number, ty: number, tz: number, iteratee: FBlocksGridIteratee) {
+    //     for (let z = fz; z < tz; z++) {
+    //         for (let x = fx; x < tx; x++) {
+    //             for (let y = fy; y < ty; y++) {
+    //                 iteratee(x, y, z, this.getBlockAt(x, y, z))
+    //             }
+    //         }
+    //     }
+    // }
 
-    static iterateGridXZ(fx: number, fz: number, tx: number, tz: number, iteratee: FBlocksGridIterateeXZ) {
+    iterateGridXZ(fx: number, fz: number, tx: number, tz: number, iteratee: FBlocksGridIterateeXZ) {
         for (let z = fz; z < tz; z++) {
             for (let x = fx; x < tx; x++) {
                 iteratee(x, z)
@@ -216,4 +215,56 @@ export class BlockManager {
         }
     }
 
+    traverseChunk(cx: number, cz: number, iteratee: FChunkGridIteratee) {
+        // this.iterateGrid(
+        //     cx * state.chunkSize,
+        //     0,
+        //     cz * state.chunkSize,
+        //     cx * state.chunkSize + state.chunkSize,
+        //     state.worldHeight,
+        //     cz * state.chunkSize + state.chunkSize,
+        //     iteratee
+        // );
+
+        for (let z = 0; z < state.chunkSize; z++) {
+            for (let x = 0; x < state.chunkSize; x++) {
+                for (let y = 0; y < state.worldHeight; y++) {
+                    iteratee(x + (cx * state.chunkSize), y, z + (cz * state.chunkSize), this.getBlockAt(x + (cx * state.chunkSize), y, z + (cz * state.chunkSize)))
+                }
+            }
+        }
+    }
+
+    traverseChunk2D(cx: number, cz: number, iteratee: FChunkGridIterateeXZ) {
+        this.iterateGridXZ(
+            cx * state.chunkSize,
+            cz * state.chunkSize,
+            cx * state.chunkSize + state.chunkSize,
+            cz * state.chunkSize + state.chunkSize,
+            iteratee
+        );
+    }
+
+    markBlocksUpdated(cx: number, cz: number): void {
+        blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
+            if (block) {
+                block.needsUpdate = false
+            }
+        })
+    }
+
+
+    countBlocksNeedUpdate(cx: number, cz: number): number {
+        let i = 0;
+        blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
+            if (block && block.needsUpdate) {
+                i++
+            }
+        })
+        return i
+    }
+
 }
+
+
+export const blockManager: BlockManager = BlockManager.getInstance()

@@ -36,7 +36,7 @@ export class VoxelBlockStandardMaterial extends MeshStandardMaterial {
       shader.uniforms.uTiles = this.uniforms.uTiles;
       shader.uniforms.uTileSize = this.uniforms.uTileSize;
 
-      console.log(shader.vertexShader)
+      // console.log(shader.vertexShader)
 
       shader.vertexShader = shader.vertexShader.replace('#define STANDARD', `
         attribute vec3 instanceData;
@@ -62,7 +62,7 @@ export class VoxelBlockStandardMaterial extends MeshStandardMaterial {
         gl_Position = projectionMatrix * mvPosition;
       `)
 
-      console.log(shader.fragmentShader)
+      // console.log(shader.fragmentShader)
 
       shader.fragmentShader = shader.fragmentShader.replace('#define STANDARD', `
         uniform vec3 uColor;

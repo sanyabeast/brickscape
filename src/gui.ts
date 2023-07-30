@@ -4,7 +4,8 @@ import { Pane } from 'tweakpane';
 
 export const monitoringData: { [x: string]: string } = {
     activeChunk: '',
-    totalTasks: ''
+    totalTasks: '',
+    chunksPoolSize: ''
 }
 
 export function createGui({ scene, camera, renderer }) {

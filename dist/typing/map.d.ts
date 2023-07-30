@@ -1,18 +1,14 @@
 import { Group, Vector3 } from "three";
 import { Chunk } from "./chunk";
 export declare function getCameraLookIntersection(camera: any): Vector3;
-export declare class VoxelMap extends Group {
+export declare class MapManager extends Group {
     camera: any;
     activeChunk: any;
-    chunks: {
-        [x: string]: Chunk;
-    };
+    _activeChunks: Chunk[];
     constructor({ camera }: {
         camera: any;
     });
     update(): void;
-    _updateChunks(): void;
-    _updateBlocks(): void;
-    _trimOldChunks(leftCount?: number): void;
-    _updateChunk(cx: number, cz: number): Chunk;
+    _syncChunks(allChunks?: boolean): void;
+    _onActiveChunkChanged(): void;
 }
