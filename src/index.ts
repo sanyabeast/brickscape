@@ -12,8 +12,6 @@ import { blockManager } from './blocks';
 
 async function main() {
 
-    await GenerationHelper.init()
-
     state.generator = generationHelper
     state.tasker = tasker
     state.world = worldManager
@@ -30,6 +28,7 @@ async function main() {
     renderer.setPixelRatio(featureLevel == FeatureLevel.Low ? 1 : pixelRatio);
 
     const camera = state.camera = new PerspectiveCamera(fov, aspect, near, far);
+   
     const scene = state.scene = new Scene();
     const environment = new Environment({
         scene,
@@ -42,14 +41,7 @@ async function main() {
 
     // CONTROLS
     let controls = state.controls = new VoxelMapControls(camera, renderer.domElement)
-    controls.screenSpacePanning = false;
-    controls.minDistance = 20;
-    controls.maxDistance = 150;
-    controls.maxPolarAngle = (Math.PI / 2.5);
-    controls.maxPolarAngle = (Math.PI);
-    controls.enableDamping = true
-    controls.dampingFactor = 0.005
-    controls.panSpeed = 1
+    
 
     // MAP
     const map = state.map = new MapManager({

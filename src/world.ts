@@ -4,7 +4,7 @@ import { generationHelper } from "./generator"
 import { EBlockCreationSource, EBlockReplacingStrategy, IBlockCreationLevels, IBlockCreationRule, IBlockPlacement, rules } from "./rules"
 import { featureLevel, state } from "./state"
 import { QueueType, tasker } from "./tasker"
-import { clamp, getChunkId, lerp, logd } from "./utils"
+import { clamp, getChunkId, lerp } from "./utils"
 
 export class WorldManager {
     static instance: WorldManager = null
@@ -63,17 +63,16 @@ export class WorldManager {
         rules.forEach((rule, index) => {
             for (let ir = 0; ir < rule.create.length; ir++) {
                 let creationRule: IBlockCreationRule = rule.create[ir]
-                blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
-                    creationRule.levels.forEach((level: IBlockCreationLevels) => {
-                        if (y >= level.min && y < level.max) {
-                            let levelHeight = level.max - level.min
-                            let blocksCount = this._testCreationRule(x, y, z, creationRule);
-                            blocksCount *= levelHeight
-                            blocksCount = clamp(blocksCount, 0, state.worldHeight)
+                creationRule.levels.forEach((level: IBlockCreationLevels) => {
+                    let levelHeight = level.max - level.min
+                    blockManager.traverseChunk2D(cx, cz, (x, z) => {
+                        let blocksRatio = this._getBlocksRatioForRule(x, z, creationRule);
+                        let blocksCount = blocksRatio * levelHeight
+                        blocksCount = clamp(blocksCount, 0, state.worldHeight)
+                        blocksCount = clamp(blocksCount, 0, levelHeight);
 
-                            for (let nb = 0; nb < blocksCount; nb++) {
-                                this._placeStructure(x, y, z, rule.structure, creationRule.replace)
-                            }
+                        for (let y = level.min; y < level.min + blocksCount; y++) {
+                            this._placeStructure(x, y, z, rule.structure, creationRule.replace)
                         }
                     })
                 })
@@ -144,20 +143,16 @@ export class WorldManager {
 
     }
 
-    _testCreationRule(x: number, y: number, z: number, creationRule: IBlockCreationRule): number {
+    _getBlocksRatioForRule(x: number, z: number, creationRule: IBlockCreationRule): number {
         switch (creationRule.source) {
-            case EBlockCreationSource.Simplex3D: {
-                return generationHelper.createSimplex3D(x, y, z, creationRule.params) * creationRule.ratio
+            case EBlockCreationSource.Simplex: {
+                return generationHelper.simplex(x, z, creationRule.params)
             }
-            case EBlockCreationSource.Simplex4D: {
-                return generationHelper.createSimplex3D(x, y, z, creationRule.params) * creationRule.ratio
-            }
-            case EBlockCreationSource.Perlin4D: {
-                return generationHelper.createPerlin4D(x, y, z, creationRule.params) * creationRule.ratio
+            case EBlockCreationSource.Perlin: {
+                return generationHelper.perlin(x, z, creationRule.params)
             }
             case EBlockCreationSource.Constant: {
-                let count = isNumber(creationRule.params.count) ? creationRule.params.count : 1
-                return count
+                return 1
             }
             default: {
                 return 0;

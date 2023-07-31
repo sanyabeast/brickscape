@@ -15,15 +15,16 @@ export interface IBlocksGenerationRule {
 }
 export declare enum EBlockCreationSource {
     Constant = 0,
-    Perlin3D = 1,
-    Perlin4D = 2
+    Simplex = 1,
+    Perlin = 2
 }
 export interface IBlockCreationSourceParams {
-    paramA?: number;
-    paramB?: number;
-    paramC?: number;
-    /**seed */
-    paramD?: number;
+    seed?: number;
+    scale?: number;
+    iterations?: number;
+    scaleStep?: number;
+    multiplier?: number;
+    addent?: number;
 }
 export interface IBlockCreationLevels {
     min: number;
@@ -31,7 +32,6 @@ export interface IBlockCreationLevels {
 }
 export interface IBlockCreationRule {
     source: EBlockCreationSource;
-    ratio: number;
     params: IBlockCreationSourceParams;
     replace: EBlockReplacingStrategy;
     levels: IBlockCreationLevels[];

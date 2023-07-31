@@ -102,11 +102,11 @@ function _patchMaterial(mat, hooks: string[]) {
         reflectedLight.indirectDiffuse *= pow(vInstanceData.z, 2.);
       `)
 
-    shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
-        #include <transmission_fragment>
-        totalDiffuse *= pow(vInstanceData.z, 1.);
-        totalSpecular *= pow(vInstanceData.z, 1.);
-      `)
+    // shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
+    //     #include <transmission_fragment>
+    //     totalDiffuse *= pow(vInstanceData.z, 1.);
+    //     totalSpecular *= pow(vInstanceData.z, 1.);
+    //   `)
   };
 }
 

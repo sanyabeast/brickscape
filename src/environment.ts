@@ -1,4 +1,4 @@
-import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color, Light, Scene, AmbientLight } from "three";
+import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color, Light, Scene, AmbientLight, Object3D } from "three";
 import { Lensflare, LensflareElement } from "three/examples/jsm/objects/LensFlare"
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { rgbeLoader, textureLoader } from "./loaders";
@@ -56,8 +56,8 @@ export class Environment extends Group {
     fog: FogExp2 = null
     daytime: number = 0.9
     dayspeed: number = 1 / 2048
-    sunRotationRadius: number = state.worldHeight * 32
-    sunElevation: number = 2
+    sunRotationRadius: number = state.drawChunks * state.chunkSize
+    sunElevation: number = 1
     minSunIntensity: number = -0.5
     maxSunIntensity: number = 0.5
 
@@ -75,15 +75,15 @@ export class Environment extends Group {
 
         let sun = this.sun = new DirectionalLight(0xfffeee, 1)
         sun.position.set(0.5, 1, -0.5);
-        scene.add(sun)
+        this.add(sun)
 
         if (featureLevel > 0) {
-            Environment.addFlares(sun, scene)
+            Environment.addFlares(sun, this)
         }
 
         if (featureLevel == 0) {
             this.ambient = new AmbientLight(0xffffff, 0.2)
-            scene.add(this.ambient)
+            this.add(this.ambient)
         }
 
         // Create the lens flare object
@@ -103,6 +103,10 @@ export class Environment extends Group {
     }
 
     update(frameDelta: number) {
+        if (state.map) {
+            this.position.set(state.map.activeChunk[0] * state.chunkSize, 0, state.map.activeChunk[1] * state.chunkSize)
+        }
+
         let sunHeight = clamp(Math.sin(this.daytime * Math.PI * 2) + 0.5, -1, 1)
         let backgroundIntensity = clamp(sunHeight + 0.1, 0, 1)
 
@@ -135,7 +139,7 @@ export class Environment extends Group {
         this.daytime += this.dayspeed * frameDelta
     }
 
-    static addFlares(light: Light, scene: Scene, count: number = 5) {
+    static addFlares(light: Light, scene: Object3D, count: number = 5) {
         const lensflare = new Lensflare();
         flaresTable.forEach((flareData, index) => {
             if (index < count) {

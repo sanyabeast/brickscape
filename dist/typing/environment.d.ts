@@ -1,4 +1,4 @@
-import { DirectionalLight, Group, FogExp2, Light, Scene, AmbientLight } from "three";
+import { DirectionalLight, Group, FogExp2, Light, AmbientLight, Object3D } from "three";
 export declare class Environment extends Group {
     sun: DirectionalLight;
     ambient: AmbientLight;
@@ -17,5 +17,5 @@ export declare class Environment extends Group {
         renderer: any;
     });
     update(frameDelta: number): void;
-    static addFlares(light: Light, scene: Scene, count?: number): void;
+    static addFlares(light: Light, scene: Object3D, count?: number): void;
 }

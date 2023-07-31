@@ -1,6 +1,122 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./node_modules/alea/alea.js":
+/*!***********************************!*\
+  !*** ./node_modules/alea/alea.js ***!
+  \***********************************/
+/***/ (function(module) {
+
+(function (root, factory) {
+  if (true) {
+      module.exports = factory();
+  } else {}
+}(this, function () {
+
+  'use strict';
+
+  // From http://baagoe.com/en/RandomMusings/javascript/
+
+  // importState to sync generator states
+  Alea.importState = function(i){
+    var random = new Alea();
+    random.importState(i);
+    return random;
+  };
+
+  return Alea;
+
+  function Alea() {
+    return (function(args) {
+      // Johannes Baagøe <baagoe@baagoe.com>, 2010
+      var s0 = 0;
+      var s1 = 0;
+      var s2 = 0;
+      var c = 1;
+
+      if (args.length == 0) {
+        args = [+new Date];
+      }
+      var mash = Mash();
+      s0 = mash(' ');
+      s1 = mash(' ');
+      s2 = mash(' ');
+
+      for (var i = 0; i < args.length; i++) {
+        s0 -= mash(args[i]);
+        if (s0 < 0) {
+          s0 += 1;
+        }
+        s1 -= mash(args[i]);
+        if (s1 < 0) {
+          s1 += 1;
+        }
+        s2 -= mash(args[i]);
+        if (s2 < 0) {
+          s2 += 1;
+        }
+      }
+      mash = null;
+
+      var random = function() {
+        var t = 2091639 * s0 + c * 2.3283064365386963e-10; // 2^-32
+        s0 = s1;
+        s1 = s2;
+        return s2 = t - (c = t | 0);
+      };
+      random.next = random;
+      random.uint32 = function() {
+        return random() * 0x100000000; // 2^32
+      };
+      random.fract53 = function() {
+        return random() + 
+          (random() * 0x200000 | 0) * 1.1102230246251565e-16; // 2^-53
+      };
+      random.version = 'Alea 0.9';
+      random.args = args;
+
+      // my own additions to sync state between two generators
+      random.exportState = function(){
+        return [s0, s1, s2, c];
+      };
+      random.importState = function(i){
+        s0 = +i[0] || 0;
+        s1 = +i[1] || 0;
+        s2 = +i[2] || 0;
+        c = +i[3] || 0;
+      };
+ 
+      return random;
+
+    } (Array.prototype.slice.call(arguments)));
+  }
+
+  function Mash() {
+    var n = 0xefc8249d;
+
+    var mash = function(data) {
+      data = data.toString();
+      for (var i = 0; i < data.length; i++) {
+        n += data.charCodeAt(i);
+        var h = 0.02519603282416938 * n;
+        n = h >>> 0;
+        h -= n;
+        h *= n;
+        n = h >>> 0;
+        h -= n;
+        n += h * 0x100000000; // 2^32
+      }
+      return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
+    };
+
+    mash.version = 'Mash 0.9';
+    return mash;
+  }
+}));
+
+
+/***/ }),
+
 /***/ "./node_modules/lodash/lodash.js":
 /*!***************************************!*\
   !*** ./node_modules/lodash/lodash.js ***!
@@ -17721,6 +17837,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var three_examples_jsm_controls_MapControls__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three/examples/jsm/controls/MapControls */ "./node_modules/three/examples/jsm/controls/MapControls.js");
 
 class VoxelMapControls extends three_examples_jsm_controls_MapControls__WEBPACK_IMPORTED_MODULE_0__.MapControls {
+    constructor(camera, domElement) {
+        super(camera, domElement);
+        this.screenSpacePanning = false;
+        this.minDistance = 20;
+        this.maxDistance = 150;
+        this.maxPolarAngle = (Math.PI / 2.5);
+        this.maxPolarAngle = (Math.PI);
+        this.enableDamping = false;
+        this.dampingFactor = 0.005;
+        this.panSpeed = 0.5;
+    }
 }
 
 
@@ -17791,8 +17918,8 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
         this.fog = null;
         this.daytime = 0.9;
         this.dayspeed = 1 / 2048;
-        this.sunRotationRadius = _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight * 32;
-        this.sunElevation = 2;
+        this.sunRotationRadius = _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
+        this.sunElevation = 1;
         this.minSunIntensity = -0.5;
         this.maxSunIntensity = 0.5;
         this.minAmbIntensity = 0.01;
@@ -17803,13 +17930,13 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
         }
         let sun = this.sun = new three__WEBPACK_IMPORTED_MODULE_4__.DirectionalLight(0xfffeee, 1);
         sun.position.set(0.5, 1, -0.5);
-        scene.add(sun);
+        this.add(sun);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
-            Environment.addFlares(sun, scene);
+            Environment.addFlares(sun, this);
         }
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel == 0) {
             this.ambient = new three__WEBPACK_IMPORTED_MODULE_4__.AmbientLight(0xffffff, 0.2);
-            scene.add(this.ambient);
+            this.add(this.ambient);
         }
         // Create the lens flare object
         let envMap = _loaders__WEBPACK_IMPORTED_MODULE_0__.rgbeLoader.load('assets/hdr/quarry.hdr', () => {
@@ -17824,6 +17951,9 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
         this.update(0);
     }
     update(frameDelta) {
+        if (_state__WEBPACK_IMPORTED_MODULE_1__.state.map) {
+            this.position.set(_state__WEBPACK_IMPORTED_MODULE_1__.state.map.activeChunk[0] * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize, 0, _state__WEBPACK_IMPORTED_MODULE_1__.state.map.activeChunk[1] * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize);
+        }
         let sunHeight = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.clamp)(Math.sin(this.daytime * Math.PI * 2) + 0.5, -1, 1);
         let backgroundIntensity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.clamp)(sunHeight + 0.1, 0, 1);
         let angle = this.daytime * Math.PI * 2;
@@ -17877,72 +18007,73 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   GenerationHelper: () => (/* binding */ GenerationHelper),
-/* harmony export */   SeededRandom: () => (/* binding */ SeededRandom),
 /* harmony export */   generationHelper: () => (/* binding */ generationHelper)
 /* harmony export */ });
-/* harmony import */ var _leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @leodeslf/perlin-noise */ "./node_modules/@leodeslf/perlin-noise/perlin.js");
-/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var alea__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! alea */ "./node_modules/alea/alea.js");
+/* harmony import */ var alea__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(alea__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var simplex_noise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! simplex-noise */ "./node_modules/simplex-noise/dist/esm/simplex-noise.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @leodeslf/perlin-noise */ "./node_modules/@leodeslf/perlin-noise/perlin.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 
 
-function SeededRandom(seed) {
-    const m = 0x80000000; // 2**31;
-    const a = 1103515245;
-    const c = 12345;
-    seed = seed || Math.floor(Math.random() * m);
-    return function () {
-        seed = (a * seed + c) % m;
-        return seed / m;
-    };
-}
+
+
+
+
+const _noiseSeedMultipier = 0.12345678;
 class GenerationHelper {
-    ;
     constructor(seed) {
-        this.seed = null;
-        this._seededRandom = null;
-        this.seed = seed;
-        this._seededRandom = SeededRandom(seed);
+        this._seed = 0;
+        this._seed = seed;
+        this._alea = alea__WEBPACK_IMPORTED_MODULE_1___default()(seed.toString());
+        this._simplex2D = (0,simplex_noise__WEBPACK_IMPORTED_MODULE_2__.createNoise2D)(this._alea);
+        this._simplex3D = (0,simplex_noise__WEBPACK_IMPORTED_MODULE_2__.createNoise3D)(this._alea);
     }
     random() {
-        return this._seededRandom();
+        return this._alea();
     }
     dice(bias = 0.5) {
         return this.random() > bias;
     }
-    // getPerlin3DNoise(x, y, z, params: IBlockCreationSourceParams) {
-    //     let val = 0;
-    //     for (let i = 0; i < params.iterations; i++) {
-    //         const stepScale = 10 * Math.pow(2, i);
-    //         const valueScale = 1 + Math.pow(2, i);
-    //         val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
-    //     }
-    //     val /= (params.iterations / 100)
-    //     val = clamp(val, 0, 1);
-    //     console.log(val)
-    //     return val
-    // }
-    getPerlin3DNoise(x, y, z, params) {
-        let val = 0;
-        for (let i = 0; i < params.paramA; i++) {
-            let iterationVal = (0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin3D)(x * params.paramB * (i + 1), y * params.paramB * (i + 1), (this.seed + params.paramD) * params.paramB * (i + 1)) * params.paramC;
-            iterationVal = (iterationVal + 0.5);
-            val += iterationVal;
+    simplex(x, y, params) {
+        let s = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.scale) ? params.scale : 1;
+        let seed = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.seed) ? (params.seed * _noiseSeedMultipier) : 0;
+        let addent = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.addent) ? params.addent : 0;
+        let v = this._simplex3D(x * s, y * s, seed);
+        let iterations = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.iterations) ? params.iterations : 0;
+        let scaleStep = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.scaleStep) ? params.scaleStep : 0.5;
+        let multiplier = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.multiplier) ? params.multiplier : 1;
+        for (let i = 0; i < iterations; i++) {
+            s *= scaleStep;
+            v += this._simplex3D(x * s, y * s, seed);
         }
-        val /= params.paramA;
-        // console.log(val)
-        return val;
+        v /= (iterations + 1);
+        v += addent;
+        v *= multiplier;
+        return (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(v, 0, 1);
     }
-    getPerlin4DNoise(x, y, z, params) {
-        let val = 0;
-        for (let i = 0; i < params.paramA; i++) {
-            let iterationVal = (0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_0__.perlin4D)(x * params.paramB * (i + 1), y * params.paramB * (i + 1), z * params.paramB * (i + 1), (this.seed + params.paramD) * params.paramB * (i + 1)) * params.paramC;
-            iterationVal = (iterationVal + 0.5);
-            val += iterationVal;
+    perlin(x, y, params) {
+        let s = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.scale) ? params.scale : 1;
+        let seed = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.seed) ? (params.seed * _noiseSeedMultipier) : 0;
+        let addent = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.addent) ? params.addent : 0;
+        let v = (0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_4__.perlin3D)(x * s, y * s, this._seed + seed);
+        let iterations = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.iterations) ? params.iterations : 0;
+        let scaleStep = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.scaleStep) ? params.scaleStep : 0.5;
+        let multiplier = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.isNumber)(params.multiplier) ? params.multiplier : 1;
+        for (let i = 0; i < iterations; i++) {
+            s *= scaleStep;
+            v = (v + (0,_leodeslf_perlin_noise__WEBPACK_IMPORTED_MODULE_4__.perlin3D)(x * s, y * s, this._seed + seed)) / 2;
         }
-        val /= params.paramA;
-        return val;
+        v += 0.5;
+        v += addent;
+        v *= multiplier;
+        return (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(v, 0, 1);
     }
 }
-const generationHelper = new GenerationHelper(_state__WEBPACK_IMPORTED_MODULE_1__.state.seed);
+const generationHelper = new GenerationHelper(_state__WEBPACK_IMPORTED_MODULE_0__.state.seed);
 
 
 /***/ }),
@@ -18205,8 +18336,8 @@ var EBlockReplacingStrategy;
 var EBlockCreationSource;
 (function (EBlockCreationSource) {
     EBlockCreationSource[EBlockCreationSource["Constant"] = 0] = "Constant";
-    EBlockCreationSource[EBlockCreationSource["Perlin3D"] = 1] = "Perlin3D";
-    EBlockCreationSource[EBlockCreationSource["Perlin4D"] = 2] = "Perlin4D";
+    EBlockCreationSource[EBlockCreationSource["Simplex"] = 1] = "Simplex";
+    EBlockCreationSource[EBlockCreationSource["Perlin"] = 2] = "Perlin";
 })(EBlockCreationSource || (EBlockCreationSource = {}));
 function getSingleBlockStructure(blockType) {
     return [{
@@ -18221,7 +18352,6 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Constant,
-                ratio: 0.5,
                 replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                         min: 0,
@@ -18231,84 +18361,88 @@ const rules = [
             }
         ]
     },
-    {
-        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock),
-        create: [
-            {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.4,
-                replace: EBlockReplacingStrategy.Stack,
-                levels: [{
-                        min: 0,
-                        max: 4
-                    }],
-                params: { paramA: 4, paramB: 0.003, paramC: 1, paramD: 0 }
-            },
-            {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.3,
-                replace: EBlockReplacingStrategy.Stack,
-                levels: [{
-                        min: 0,
-                        max: 4
-                    }],
-                params: { paramA: 6, paramB: 0.01, paramC: 1, paramD: 0 }
-            }
-        ]
-    },
+    // {
+    //     structure: getSingleBlockStructure(BlockType.Rock),
+    //     create: [
+    //         {
+    //             source: EBlockCreationSource.Simplex,
+    //             replace: EBlockReplacingStrategy.Stack,
+    //             levels: [{
+    //                 min: 0,
+    //                 max: 8
+    //             }],
+    //             params: { scale: 0.1, iterations: 0, scaleStep: 2, time: 1.21331 }
+    //         },
+    //     ]
+    // },
     {
         structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel),
         create: [
             {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.25,
+                source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.Stack,
                 levels: [{
-                        min: 2,
+                        min: 0,
                         max: 8
                     }],
-                params: { paramA: 6, paramB: 0.008, paramC: 1, paramD: 1214 }
+                params: { scale: 0.02, iterations: 0, scaleStep: 1.11, seed: 10, addent: -0.3 }
             },
-            {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.25,
-                replace: EBlockReplacingStrategy.Stack,
-                levels: [{
-                        min: 2,
-                        max: 6
-                    }],
-                params: { paramA: 6, paramB: 0.02, paramC: 1, paramD: 123 }
-            }
         ]
     },
     {
         structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt),
         create: [
             {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.5,
+                source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.Stack,
                 levels: [{
-                        min: 8,
-                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                        min: 0,
+                        max: 8
                     }],
-                params: { paramA: 4, paramB: 0.002, paramC: 1, paramD: 665 }
-            }
+                params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 115, addent: -0.4, multiplier: 1.5 }
+            },
         ]
     },
     {
         structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Sand),
         create: [
             {
-                source: EBlockCreationSource.Constant,
-                ratio: 0.5,
+                source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.OnlyReplace,
                 levels: [{
-                        min: 4,
-                        max: 5
+                        min: 0,
+                        max: 3
                     }],
-                params: {}
-            }
+                params: { scale: 0.01, iterations: 0, scaleStep: 1.11, seed: 115, addent: 0.5, multiplier: 2 }
+            },
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.OnlyReplace,
+                levels: [{
+                        min: 6,
+                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                    }],
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 2234, addent: 0.5 }
+            },
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                        min: 10,
+                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                    }],
+                params: { scale: 0.1, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.9, multiplier: 2 }
+            },
         ]
     },
     {
@@ -18316,53 +18450,12 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Constant,
-                ratio: 0.5,
                 replace: EBlockReplacingStrategy.DontReplace,
                 levels: [{
-                        min: 3,
-                        max: 4
+                        min: 1,
+                        max: 3
                     }],
                 params: {}
-            }
-        ]
-    },
-    {
-        structure: [
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [0, 0] },
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [1, 0] },
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [0, 1] },
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [1, 1] },
-        ],
-        create: [
-            {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.2,
-                replace: EBlockReplacingStrategy.OnlyReplace,
-                levels: [{
-                        min: 6,
-                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
-                    }],
-                params: { paramA: 4, paramB: 0.4, paramC: 1, paramD: 212 }
-            }
-        ]
-    },
-    {
-        structure: [
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel, offset: [0, 0] },
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock, offset: [1, 0] },
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Sand, offset: [0, 1] },
-            { blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt, offset: [1, 1] },
-        ],
-        create: [
-            {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 0.4,
-                replace: EBlockReplacingStrategy.OnlyReplace,
-                levels: [{
-                        min: 5,
-                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight / 2
-                    }],
-                params: { paramA: 4, paramB: 0.4, paramC: 1, paramD: 115 }
             }
         ]
     },
@@ -18479,11 +18572,11 @@ function _patchMaterial(mat, hooks) {
         reflectedLight.directDiffuse *= pow(vInstanceData.z, 2.);
         reflectedLight.indirectDiffuse *= pow(vInstanceData.z, 2.);
       `);
-        shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
-        #include <transmission_fragment>
-        totalDiffuse *= pow(vInstanceData.z, 1.);
-        totalSpecular *= pow(vInstanceData.z, 1.);
-      `);
+        // shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
+        //     #include <transmission_fragment>
+        //     totalDiffuse *= pow(vInstanceData.z, 1.);
+        //     totalSpecular *= pow(vInstanceData.z, 1.);
+        //   `)
     };
 }
 /**
@@ -18594,11 +18687,11 @@ var FeatureLevel;
 let featureLevel = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.isMobileDevice)() ? FeatureLevel.Low : FeatureLevel.Mid;
 const state = {
     maxChunksInMemory: 512,
-    seed: 1,
-    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
+    seed: 12,
+    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
-    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Cube,
-    worldHeight: 12,
+    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Prism6,
+    worldHeight: 16,
     camera: null,
     scene: null,
     renderer: null,
@@ -18829,13 +18922,27 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   clamp: () => (/* binding */ clamp),
 /* harmony export */   distance: () => (/* binding */ distance),
+/* harmony export */   getAlpha: () => (/* binding */ getAlpha),
 /* harmony export */   getChunkId: () => (/* binding */ getChunkId),
 /* harmony export */   getNearestMultiple: () => (/* binding */ getNearestMultiple),
+/* harmony export */   getNearestMultipleUp: () => (/* binding */ getNearestMultipleUp),
+/* harmony export */   getPixelBrightness: () => (/* binding */ getPixelBrightness),
+/* harmony export */   getPixelBrightness2: () => (/* binding */ getPixelBrightness2),
 /* harmony export */   getRandomHexColor: () => (/* binding */ getRandomHexColor),
 /* harmony export */   isMobileDevice: () => (/* binding */ isMobileDevice),
 /* harmony export */   lerp: () => (/* binding */ lerp),
-/* harmony export */   logd: () => (/* binding */ logd)
+/* harmony export */   logd: () => (/* binding */ logd),
+/* harmony export */   waitForCallback: () => (/* binding */ waitForCallback)
 /* harmony export */ });
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 function stringToSeed(str) {
     let seed = 0;
     for (let i = 0; i < str.length; i++) {
@@ -18851,6 +18958,13 @@ function getRandomColorFromStringSeed(str) {
 function getNearestMultiple(num, div = 1) {
     return Math.floor(num / div) * div;
 }
+function getNearestMultipleUp(num, div = 1) {
+    return Math.ceil(num / div) * div;
+}
+function getAlpha(a, b, test) {
+    return clamp(1 - ((b - test) / (b - a)), 0, 1);
+}
+window.getAlpha = getAlpha;
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
@@ -18871,6 +18985,66 @@ function distance(ax, ay, bx, by) {
 }
 function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+function waitForCallback(callback) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve) => {
+            callback(resolve);
+        });
+    });
+}
+function getPixelBrightness(imageElement, x, y) {
+    let ctx;
+    const width = imageElement.width;
+    const height = imageElement.height;
+    if (imageElement._ctx) {
+        ctx = imageElement._canvasCtx;
+    }
+    else {
+        let canvas = document.createElement("canvas");
+        ctx = canvas.getContext("2d");
+        canvas.width = width;
+        canvas.height = height;
+        // Draw the image onto the canvas
+        ctx.drawImage(imageElement, 0, 0, width, height);
+        imageElement._canvasCtx = ctx;
+    }
+    // Ensure coordinates are within the image boundaries
+    x = Math.floor(x % width);
+    y = Math.floor(y % height);
+    // Get the pixel data of the image at the specified coordinates
+    const imageData = ctx.getImageData(x, y, 1, 1).data;
+    // Calculate the brightness (average of RGB values) of the pixel
+    const brightness = (imageData[0] + imageData[1] + imageData[2]) / 3;
+    // Return the brightness value
+    return brightness / 256;
+}
+function getPixelBrightness2(imageElement, x, y) {
+    let ctx;
+    const width = imageElement.width;
+    const height = imageElement.height;
+    if (imageElement._ctx) {
+        ctx = imageElement._canvasCtx;
+    }
+    else {
+        let canvas = document.createElement("canvas");
+        ctx = canvas.getContext("2d");
+        canvas.width = width;
+        canvas.height = height;
+        // Draw the image onto the canvas
+        ctx.drawImage(imageElement, 0, 0, width, height);
+        imageElement._canvasCtx = ctx;
+    }
+    let px = Math.floor(x);
+    let py = Math.floor(y);
+    let xa = getAlpha(px, px + 1, x);
+    let ya = getAlpha(py, py + 1, y);
+    let brightness0 = getPixelBrightness(imageElement, px, py);
+    let brightness1 = lerp(brightness0, getPixelBrightness(imageElement, px + 1, py), xa);
+    let brightness2 = lerp(brightness0, getPixelBrightness(imageElement, px, py + 1), ya);
+    let brightness3 = lerp(brightness0, getPixelBrightness(imageElement, px + 1, py + 1), ya * xa);
+    let brightness = (brightness0 + brightness1 + brightness2 + brightness2) / 4;
+    return brightness;
 }
 
 
@@ -18951,12 +19125,17 @@ class WorldManager {
         _rules__WEBPACK_IMPORTED_MODULE_2__.rules.forEach((rule, index) => {
             for (let ir = 0; ir < rule.create.length; ir++) {
                 let creationRule = rule.create[ir];
-                _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
-                    if (this._testLevels(y, creationRule.levels)) {
-                        if (this._testCreationRule(x, y, z, creationRule)) {
+                creationRule.levels.forEach((level) => {
+                    let levelHeight = level.max - level.min;
+                    _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk2D(cx, cz, (x, z) => {
+                        let blocksRatio = this._getBlocksRatioForRule(x, z, creationRule);
+                        let blocksCount = blocksRatio * levelHeight;
+                        blocksCount = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(blocksCount, 0, _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight);
+                        blocksCount = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(blocksCount, 0, levelHeight);
+                        for (let y = level.min; y < level.min + blocksCount; y++) {
                             this._placeStructure(x, y, z, rule.structure, creationRule.replace);
                         }
-                    }
+                    });
                 });
             }
         });
@@ -19007,7 +19186,7 @@ class WorldManager {
             }
             case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockReplacingStrategy.Stack: {
                 let elevation = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z);
-                if (elevation < _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight) {
+                if (elevation < _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight - 1) {
                     new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
                         chunk: this,
                         x: x,
@@ -19021,98 +19200,21 @@ class WorldManager {
             }
         }
     }
-    _testLevels(y, levels) {
-        for (let i = 0; i < levels.length; i++) {
-            let level = levels[i];
-            if (y >= level.min && y < level.max) {
-                return true;
-            }
-        }
-        return false;
-    }
-    _testCreationRule(x, y, z, creationRule) {
+    _getBlocksRatioForRule(x, z, creationRule) {
         switch (creationRule.source) {
-            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Perlin3D: {
-                return _generator__WEBPACK_IMPORTED_MODULE_1__.generationHelper.getPerlin3DNoise(x, z, null, creationRule.params) < creationRule.ratio;
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Simplex: {
+                return _generator__WEBPACK_IMPORTED_MODULE_1__.generationHelper.simplex(x, z, creationRule.params);
             }
-            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Perlin4D: {
-                return _generator__WEBPACK_IMPORTED_MODULE_1__.generationHelper.getPerlin4DNoise(x, z, y, creationRule.params) < creationRule.ratio;
+            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Perlin: {
+                return _generator__WEBPACK_IMPORTED_MODULE_1__.generationHelper.perlin(x, z, creationRule.params);
             }
             case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockCreationSource.Constant: {
-                return true;
+                return 1;
             }
             default: {
-                return false;
+                return 0;
             }
         }
-    }
-    _generateChunk(cx, cz) {
-        (0,_utils__WEBPACK_IMPORTED_MODULE_5__.logd)('WorldManager._generateChunk', `start generating at [${cx}, ${cz}]`);
-        // bedrock level
-        _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
-                chunk: this,
-                x: x,
-                y: 0,
-                z: z,
-                lightness: 1,
-                blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Bedrock
-            });
-        });
-        // main perlin noise
-        _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            let noiseValue = _state__WEBPACK_IMPORTED_MODULE_3__.state.generator.getPerlin3DNoise(x, z, null, {
-                paramA: 4
-            });
-            let heightValue = Math.floor(_state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight * noiseValue) + 1;
-            for (let i = 1; i < heightValue - 1; i++) {
-                new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
-                    chunk: this,
-                    x: x,
-                    y: i,
-                    z: z,
-                    lightness: 1,
-                    blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.None
-                });
-            }
-        });
-        // watering
-        let waterLevel = 2;
-        _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            let existingBlock = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getBlockAt(x, waterLevel, z);
-            if (!existingBlock) {
-                new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
-                    chunk: this,
-                    x: x,
-                    y: waterLevel,
-                    z: z,
-                    lightness: 1,
-                    blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Water
-                });
-            }
-        });
-        // types 
-        _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
-            if (block) {
-                if (block.btype === _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.None) {
-                    let blockType = _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt;
-                    if (block.by < 8 && Math.random() > 0.8) {
-                        blockType = _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock;
-                    }
-                    else if (block.by < 6 && Math.random() > 0.9) {
-                        blockType = _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel;
-                    }
-                    else if (block.by < 6) {
-                        blockType = _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Sand;
-                    }
-                    let blockChanged = block.update({
-                        lightness: block.lightness,
-                        blockType
-                    });
-                }
-            }
-        });
-        this.updatedChunks.push([cx, cz]);
     }
     _updateChunkLighting(cx, cz) {
         // shading 
@@ -27108,6 +27210,487 @@ function perlin4D(x, y, z, t) {
 
 
 
+
+/***/ }),
+
+/***/ "./node_modules/simplex-noise/dist/esm/simplex-noise.js":
+/*!**************************************************************!*\
+  !*** ./node_modules/simplex-noise/dist/esm/simplex-noise.js ***!
+  \**************************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   buildPermutationTable: () => (/* binding */ buildPermutationTable),
+/* harmony export */   createNoise2D: () => (/* binding */ createNoise2D),
+/* harmony export */   createNoise3D: () => (/* binding */ createNoise3D),
+/* harmony export */   createNoise4D: () => (/* binding */ createNoise4D)
+/* harmony export */ });
+/*
+ * A fast javascript implementation of simplex noise by Jonas Wagner
+
+Based on a speed-improved simplex noise algorithm for 2D, 3D and 4D in Java.
+Which is based on example code by Stefan Gustavson (stegu@itn.liu.se).
+With Optimisations by Peter Eastman (peastman@drizzle.stanford.edu).
+Better rank ordering method by Stefan Gustavson in 2012.
+
+ Copyright (c) 2022 Jonas Wagner
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+// these #__PURE__ comments help uglifyjs with dead code removal
+// 
+const F2 = /*#__PURE__*/ 0.5 * (Math.sqrt(3.0) - 1.0);
+const G2 = /*#__PURE__*/ (3.0 - Math.sqrt(3.0)) / 6.0;
+const F3 = 1.0 / 3.0;
+const G3 = 1.0 / 6.0;
+const F4 = /*#__PURE__*/ (Math.sqrt(5.0) - 1.0) / 4.0;
+const G4 = /*#__PURE__*/ (5.0 - Math.sqrt(5.0)) / 20.0;
+// I'm really not sure why this | 0 (basically a coercion to int)
+// is making this faster but I get ~5 million ops/sec more on the
+// benchmarks across the board or a ~10% speedup.
+const fastFloor = (x) => Math.floor(x) | 0;
+const grad2 = /*#__PURE__*/ new Float64Array([1, 1,
+    -1, 1,
+    1, -1,
+    -1, -1,
+    1, 0,
+    -1, 0,
+    1, 0,
+    -1, 0,
+    0, 1,
+    0, -1,
+    0, 1,
+    0, -1]);
+// double seems to be faster than single or int's
+// probably because most operations are in double precision
+const grad3 = /*#__PURE__*/ new Float64Array([1, 1, 0,
+    -1, 1, 0,
+    1, -1, 0,
+    -1, -1, 0,
+    1, 0, 1,
+    -1, 0, 1,
+    1, 0, -1,
+    -1, 0, -1,
+    0, 1, 1,
+    0, -1, 1,
+    0, 1, -1,
+    0, -1, -1]);
+// double is a bit quicker here as well
+const grad4 = /*#__PURE__*/ new Float64Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1,
+    0, -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1,
+    1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1,
+    -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1,
+    1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1,
+    -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1,
+    1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0,
+    -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0]);
+/**
+ * Creates a 2D noise function
+ * @param random the random function that will be used to build the permutation table
+ * @returns {NoiseFunction2D}
+ */
+function createNoise2D(random = Math.random) {
+    const perm = buildPermutationTable(random);
+    // precalculating this yields a little ~3% performance improvement.
+    const permGrad2x = new Float64Array(perm).map(v => grad2[(v % 12) * 2]);
+    const permGrad2y = new Float64Array(perm).map(v => grad2[(v % 12) * 2 + 1]);
+    return function noise2D(x, y) {
+        // if(!isFinite(x) || !isFinite(y)) return 0;
+        let n0 = 0; // Noise contributions from the three corners
+        let n1 = 0;
+        let n2 = 0;
+        // Skew the input space to determine which simplex cell we're in
+        const s = (x + y) * F2; // Hairy factor for 2D
+        const i = fastFloor(x + s);
+        const j = fastFloor(y + s);
+        const t = (i + j) * G2;
+        const X0 = i - t; // Unskew the cell origin back to (x,y) space
+        const Y0 = j - t;
+        const x0 = x - X0; // The x,y distances from the cell origin
+        const y0 = y - Y0;
+        // For the 2D case, the simplex shape is an equilateral triangle.
+        // Determine which simplex we are in.
+        let i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
+        if (x0 > y0) {
+            i1 = 1;
+            j1 = 0;
+        } // lower triangle, XY order: (0,0)->(1,0)->(1,1)
+        else {
+            i1 = 0;
+            j1 = 1;
+        } // upper triangle, YX order: (0,0)->(0,1)->(1,1)
+        // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+        // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+        // c = (3-sqrt(3))/6
+        const x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+        const y1 = y0 - j1 + G2;
+        const x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
+        const y2 = y0 - 1.0 + 2.0 * G2;
+        // Work out the hashed gradient indices of the three simplex corners
+        const ii = i & 255;
+        const jj = j & 255;
+        // Calculate the contribution from the three corners
+        let t0 = 0.5 - x0 * x0 - y0 * y0;
+        if (t0 >= 0) {
+            const gi0 = ii + perm[jj];
+            const g0x = permGrad2x[gi0];
+            const g0y = permGrad2y[gi0];
+            t0 *= t0;
+            // n0 = t0 * t0 * (grad2[gi0] * x0 + grad2[gi0 + 1] * y0); // (x,y) of grad3 used for 2D gradient
+            n0 = t0 * t0 * (g0x * x0 + g0y * y0);
+        }
+        let t1 = 0.5 - x1 * x1 - y1 * y1;
+        if (t1 >= 0) {
+            const gi1 = ii + i1 + perm[jj + j1];
+            const g1x = permGrad2x[gi1];
+            const g1y = permGrad2y[gi1];
+            t1 *= t1;
+            // n1 = t1 * t1 * (grad2[gi1] * x1 + grad2[gi1 + 1] * y1);
+            n1 = t1 * t1 * (g1x * x1 + g1y * y1);
+        }
+        let t2 = 0.5 - x2 * x2 - y2 * y2;
+        if (t2 >= 0) {
+            const gi2 = ii + 1 + perm[jj + 1];
+            const g2x = permGrad2x[gi2];
+            const g2y = permGrad2y[gi2];
+            t2 *= t2;
+            // n2 = t2 * t2 * (grad2[gi2] * x2 + grad2[gi2 + 1] * y2);
+            n2 = t2 * t2 * (g2x * x2 + g2y * y2);
+        }
+        // Add contributions from each corner to get the final noise value.
+        // The result is scaled to return values in the interval [-1,1].
+        return 70.0 * (n0 + n1 + n2);
+    };
+}
+/**
+ * Creates a 3D noise function
+ * @param random the random function that will be used to build the permutation table
+ * @returns {NoiseFunction3D}
+ */
+function createNoise3D(random = Math.random) {
+    const perm = buildPermutationTable(random);
+    // precalculating these seems to yield a speedup of over 15%
+    const permGrad3x = new Float64Array(perm).map(v => grad3[(v % 12) * 3]);
+    const permGrad3y = new Float64Array(perm).map(v => grad3[(v % 12) * 3 + 1]);
+    const permGrad3z = new Float64Array(perm).map(v => grad3[(v % 12) * 3 + 2]);
+    return function noise3D(x, y, z) {
+        let n0, n1, n2, n3; // Noise contributions from the four corners
+        // Skew the input space to determine which simplex cell we're in
+        const s = (x + y + z) * F3; // Very nice and simple skew factor for 3D
+        const i = fastFloor(x + s);
+        const j = fastFloor(y + s);
+        const k = fastFloor(z + s);
+        const t = (i + j + k) * G3;
+        const X0 = i - t; // Unskew the cell origin back to (x,y,z) space
+        const Y0 = j - t;
+        const Z0 = k - t;
+        const x0 = x - X0; // The x,y,z distances from the cell origin
+        const y0 = y - Y0;
+        const z0 = z - Z0;
+        // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
+        // Determine which simplex we are in.
+        let i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
+        let i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
+        if (x0 >= y0) {
+            if (y0 >= z0) {
+                i1 = 1;
+                j1 = 0;
+                k1 = 0;
+                i2 = 1;
+                j2 = 1;
+                k2 = 0;
+            } // X Y Z order
+            else if (x0 >= z0) {
+                i1 = 1;
+                j1 = 0;
+                k1 = 0;
+                i2 = 1;
+                j2 = 0;
+                k2 = 1;
+            } // X Z Y order
+            else {
+                i1 = 0;
+                j1 = 0;
+                k1 = 1;
+                i2 = 1;
+                j2 = 0;
+                k2 = 1;
+            } // Z X Y order
+        }
+        else { // x0<y0
+            if (y0 < z0) {
+                i1 = 0;
+                j1 = 0;
+                k1 = 1;
+                i2 = 0;
+                j2 = 1;
+                k2 = 1;
+            } // Z Y X order
+            else if (x0 < z0) {
+                i1 = 0;
+                j1 = 1;
+                k1 = 0;
+                i2 = 0;
+                j2 = 1;
+                k2 = 1;
+            } // Y Z X order
+            else {
+                i1 = 0;
+                j1 = 1;
+                k1 = 0;
+                i2 = 1;
+                j2 = 1;
+                k2 = 0;
+            } // Y X Z order
+        }
+        // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
+        // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
+        // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
+        // c = 1/6.
+        const x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
+        const y1 = y0 - j1 + G3;
+        const z1 = z0 - k1 + G3;
+        const x2 = x0 - i2 + 2.0 * G3; // Offsets for third corner in (x,y,z) coords
+        const y2 = y0 - j2 + 2.0 * G3;
+        const z2 = z0 - k2 + 2.0 * G3;
+        const x3 = x0 - 1.0 + 3.0 * G3; // Offsets for last corner in (x,y,z) coords
+        const y3 = y0 - 1.0 + 3.0 * G3;
+        const z3 = z0 - 1.0 + 3.0 * G3;
+        // Work out the hashed gradient indices of the four simplex corners
+        const ii = i & 255;
+        const jj = j & 255;
+        const kk = k & 255;
+        // Calculate the contribution from the four corners
+        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+        if (t0 < 0)
+            n0 = 0.0;
+        else {
+            const gi0 = ii + perm[jj + perm[kk]];
+            t0 *= t0;
+            n0 = t0 * t0 * (permGrad3x[gi0] * x0 + permGrad3y[gi0] * y0 + permGrad3z[gi0] * z0);
+        }
+        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+        if (t1 < 0)
+            n1 = 0.0;
+        else {
+            const gi1 = ii + i1 + perm[jj + j1 + perm[kk + k1]];
+            t1 *= t1;
+            n1 = t1 * t1 * (permGrad3x[gi1] * x1 + permGrad3y[gi1] * y1 + permGrad3z[gi1] * z1);
+        }
+        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+        if (t2 < 0)
+            n2 = 0.0;
+        else {
+            const gi2 = ii + i2 + perm[jj + j2 + perm[kk + k2]];
+            t2 *= t2;
+            n2 = t2 * t2 * (permGrad3x[gi2] * x2 + permGrad3y[gi2] * y2 + permGrad3z[gi2] * z2);
+        }
+        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+        if (t3 < 0)
+            n3 = 0.0;
+        else {
+            const gi3 = ii + 1 + perm[jj + 1 + perm[kk + 1]];
+            t3 *= t3;
+            n3 = t3 * t3 * (permGrad3x[gi3] * x3 + permGrad3y[gi3] * y3 + permGrad3z[gi3] * z3);
+        }
+        // Add contributions from each corner to get the final noise value.
+        // The result is scaled to stay just inside [-1,1]
+        return 32.0 * (n0 + n1 + n2 + n3);
+    };
+}
+/**
+ * Creates a 4D noise function
+ * @param random the random function that will be used to build the permutation table
+ * @returns {NoiseFunction4D}
+ */
+function createNoise4D(random = Math.random) {
+    const perm = buildPermutationTable(random);
+    // precalculating these leads to a ~10% speedup
+    const permGrad4x = new Float64Array(perm).map(v => grad4[(v % 32) * 4]);
+    const permGrad4y = new Float64Array(perm).map(v => grad4[(v % 32) * 4 + 1]);
+    const permGrad4z = new Float64Array(perm).map(v => grad4[(v % 32) * 4 + 2]);
+    const permGrad4w = new Float64Array(perm).map(v => grad4[(v % 32) * 4 + 3]);
+    return function noise4D(x, y, z, w) {
+        let n0, n1, n2, n3, n4; // Noise contributions from the five corners
+        // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
+        const s = (x + y + z + w) * F4; // Factor for 4D skewing
+        const i = fastFloor(x + s);
+        const j = fastFloor(y + s);
+        const k = fastFloor(z + s);
+        const l = fastFloor(w + s);
+        const t = (i + j + k + l) * G4; // Factor for 4D unskewing
+        const X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space
+        const Y0 = j - t;
+        const Z0 = k - t;
+        const W0 = l - t;
+        const x0 = x - X0; // The x,y,z,w distances from the cell origin
+        const y0 = y - Y0;
+        const z0 = z - Z0;
+        const w0 = w - W0;
+        // For the 4D case, the simplex is a 4D shape I won't even try to describe.
+        // To find out which of the 24 possible simplices we're in, we need to
+        // determine the magnitude ordering of x0, y0, z0 and w0.
+        // Six pair-wise comparisons are performed between each possible pair
+        // of the four coordinates, and the results are used to rank the numbers.
+        let rankx = 0;
+        let ranky = 0;
+        let rankz = 0;
+        let rankw = 0;
+        if (x0 > y0)
+            rankx++;
+        else
+            ranky++;
+        if (x0 > z0)
+            rankx++;
+        else
+            rankz++;
+        if (x0 > w0)
+            rankx++;
+        else
+            rankw++;
+        if (y0 > z0)
+            ranky++;
+        else
+            rankz++;
+        if (y0 > w0)
+            ranky++;
+        else
+            rankw++;
+        if (z0 > w0)
+            rankz++;
+        else
+            rankw++;
+        // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
+        // Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and x<w
+        // impossible. Only the 24 indices which have non-zero entries make any sense.
+        // We use a thresholding to set the coordinates in turn from the largest magnitude.
+        // Rank 3 denotes the largest coordinate.
+        // Rank 2 denotes the second largest coordinate.
+        // Rank 1 denotes the second smallest coordinate.
+        // The integer offsets for the second simplex corner
+        const i1 = rankx >= 3 ? 1 : 0;
+        const j1 = ranky >= 3 ? 1 : 0;
+        const k1 = rankz >= 3 ? 1 : 0;
+        const l1 = rankw >= 3 ? 1 : 0;
+        // The integer offsets for the third simplex corner
+        const i2 = rankx >= 2 ? 1 : 0;
+        const j2 = ranky >= 2 ? 1 : 0;
+        const k2 = rankz >= 2 ? 1 : 0;
+        const l2 = rankw >= 2 ? 1 : 0;
+        // The integer offsets for the fourth simplex corner
+        const i3 = rankx >= 1 ? 1 : 0;
+        const j3 = ranky >= 1 ? 1 : 0;
+        const k3 = rankz >= 1 ? 1 : 0;
+        const l3 = rankw >= 1 ? 1 : 0;
+        // The fifth corner has all coordinate offsets = 1, so no need to compute that.
+        const x1 = x0 - i1 + G4; // Offsets for second corner in (x,y,z,w) coords
+        const y1 = y0 - j1 + G4;
+        const z1 = z0 - k1 + G4;
+        const w1 = w0 - l1 + G4;
+        const x2 = x0 - i2 + 2.0 * G4; // Offsets for third corner in (x,y,z,w) coords
+        const y2 = y0 - j2 + 2.0 * G4;
+        const z2 = z0 - k2 + 2.0 * G4;
+        const w2 = w0 - l2 + 2.0 * G4;
+        const x3 = x0 - i3 + 3.0 * G4; // Offsets for fourth corner in (x,y,z,w) coords
+        const y3 = y0 - j3 + 3.0 * G4;
+        const z3 = z0 - k3 + 3.0 * G4;
+        const w3 = w0 - l3 + 3.0 * G4;
+        const x4 = x0 - 1.0 + 4.0 * G4; // Offsets for last corner in (x,y,z,w) coords
+        const y4 = y0 - 1.0 + 4.0 * G4;
+        const z4 = z0 - 1.0 + 4.0 * G4;
+        const w4 = w0 - 1.0 + 4.0 * G4;
+        // Work out the hashed gradient indices of the five simplex corners
+        const ii = i & 255;
+        const jj = j & 255;
+        const kk = k & 255;
+        const ll = l & 255;
+        // Calculate the contribution from the five corners
+        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
+        if (t0 < 0)
+            n0 = 0.0;
+        else {
+            const gi0 = ii + perm[jj + perm[kk + perm[ll]]];
+            t0 *= t0;
+            n0 = t0 * t0 * (permGrad4x[gi0] * x0 + permGrad4y[gi0] * y0 + permGrad4z[gi0] * z0 + permGrad4w[gi0] * w0);
+        }
+        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
+        if (t1 < 0)
+            n1 = 0.0;
+        else {
+            const gi1 = ii + i1 + perm[jj + j1 + perm[kk + k1 + perm[ll + l1]]];
+            t1 *= t1;
+            n1 = t1 * t1 * (permGrad4x[gi1] * x1 + permGrad4y[gi1] * y1 + permGrad4z[gi1] * z1 + permGrad4w[gi1] * w1);
+        }
+        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
+        if (t2 < 0)
+            n2 = 0.0;
+        else {
+            const gi2 = ii + i2 + perm[jj + j2 + perm[kk + k2 + perm[ll + l2]]];
+            t2 *= t2;
+            n2 = t2 * t2 * (permGrad4x[gi2] * x2 + permGrad4y[gi2] * y2 + permGrad4z[gi2] * z2 + permGrad4w[gi2] * w2);
+        }
+        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
+        if (t3 < 0)
+            n3 = 0.0;
+        else {
+            const gi3 = ii + i3 + perm[jj + j3 + perm[kk + k3 + perm[ll + l3]]];
+            t3 *= t3;
+            n3 = t3 * t3 * (permGrad4x[gi3] * x3 + permGrad4y[gi3] * y3 + permGrad4z[gi3] * z3 + permGrad4w[gi3] * w3);
+        }
+        let t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
+        if (t4 < 0)
+            n4 = 0.0;
+        else {
+            const gi4 = ii + 1 + perm[jj + 1 + perm[kk + 1 + perm[ll + 1]]];
+            t4 *= t4;
+            n4 = t4 * t4 * (permGrad4x[gi4] * x4 + permGrad4y[gi4] * y4 + permGrad4z[gi4] * z4 + permGrad4w[gi4] * w4);
+        }
+        // Sum up and scale the result to cover the range [-1,1]
+        return 27.0 * (n0 + n1 + n2 + n3 + n4);
+    };
+}
+/**
+ * Builds a random permutation table.
+ * This is exported only for (internal) testing purposes.
+ * Do not rely on this export.
+ * @private
+ */
+function buildPermutationTable(random) {
+    const tableSize = 512;
+    const p = new Uint8Array(tableSize);
+    for (let i = 0; i < tableSize / 2; i++) {
+        p[i] = i;
+    }
+    for (let i = 0; i < tableSize / 2 - 1; i++) {
+        const r = i + ~~(random() * (256 - i));
+        const aux = p[i];
+        p[i] = p[r];
+        p[r] = aux;
+    }
+    for (let i = 256; i < tableSize; i++) {
+        p[i] = p[i - 256];
+    }
+    return p;
+}
+//# sourceMappingURL=simplex-noise.js.map
 
 /***/ }),
 
@@ -81061,6 +81644,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
 /* harmony import */ var _world__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./world */ "./src/world.ts");
 /* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 
 
 
@@ -81072,70 +81664,64 @@ __webpack_require__.r(__webpack_exports__);
 
 
 function main() {
-    _state__WEBPACK_IMPORTED_MODULE_3__.state.generator = _generator__WEBPACK_IMPORTED_MODULE_5__.generationHelper;
-    _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker = _tasker__WEBPACK_IMPORTED_MODULE_6__.tasker;
-    _state__WEBPACK_IMPORTED_MODULE_3__.state.world = _world__WEBPACK_IMPORTED_MODULE_7__.worldManager;
-    _state__WEBPACK_IMPORTED_MODULE_3__.state.blockManager = _blocks__WEBPACK_IMPORTED_MODULE_8__.blockManager;
-    const pixelRatio = window.devicePixelRatio;
-    const fov = 60;
-    const near = 0.1;
-    const far = 2048;
-    let aspect = 2; // the canvas default
-    const canvas = _state__WEBPACK_IMPORTED_MODULE_3__.state.canvas = document.querySelector('#c');
-    const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new three__WEBPACK_IMPORTED_MODULE_9__.WebGLRenderer({ canvas });
-    renderer.setPixelRatio(_state__WEBPACK_IMPORTED_MODULE_3__.featureLevel == _state__WEBPACK_IMPORTED_MODULE_3__.FeatureLevel.Low ? 1 : pixelRatio);
-    const camera = _state__WEBPACK_IMPORTED_MODULE_3__.state.camera = new three__WEBPACK_IMPORTED_MODULE_9__.PerspectiveCamera(fov, aspect, near, far);
-    const scene = _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_9__.Scene();
-    const environment = new _environment__WEBPACK_IMPORTED_MODULE_4__.Environment({
-        scene,
-        camera,
-        renderer
-    });
-    scene.add(environment);
-    // CONTROLS
-    let controls = _state__WEBPACK_IMPORTED_MODULE_3__.state.controls = new _controls__WEBPACK_IMPORTED_MODULE_0__.VoxelMapControls(camera, renderer.domElement);
-    controls.screenSpacePanning = false;
-    controls.minDistance = 20;
-    controls.maxDistance = 150;
-    controls.maxPolarAngle = (Math.PI / 2.5);
-    controls.maxPolarAngle = (Math.PI);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.005;
-    controls.panSpeed = 1;
-    // MAP
-    const map = _state__WEBPACK_IMPORTED_MODULE_3__.state.map = new _map__WEBPACK_IMPORTED_MODULE_1__.MapManager({
-        camera
-    });
-    scene.add(map);
-    // RENDER LOOP
-    let prevFrameTime = +new Date();
-    function render() {
-        let now = +new Date();
-        let frameTimeDelta = now - prevFrameTime;
-        let frameDelta = frameTimeDelta / (1000 / 60);
+    return __awaiter(this, void 0, void 0, function* () {
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.generator = _generator__WEBPACK_IMPORTED_MODULE_5__.generationHelper;
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker = _tasker__WEBPACK_IMPORTED_MODULE_6__.tasker;
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.world = _world__WEBPACK_IMPORTED_MODULE_7__.worldManager;
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.blockManager = _blocks__WEBPACK_IMPORTED_MODULE_8__.blockManager;
+        const pixelRatio = window.devicePixelRatio;
+        const fov = 60;
+        const near = 0.1;
+        const far = 2048;
+        let aspect = 2; // the canvas default
+        const canvas = _state__WEBPACK_IMPORTED_MODULE_3__.state.canvas = document.querySelector('#c');
+        const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new three__WEBPACK_IMPORTED_MODULE_9__.WebGLRenderer({ canvas });
+        renderer.setPixelRatio(_state__WEBPACK_IMPORTED_MODULE_3__.featureLevel == _state__WEBPACK_IMPORTED_MODULE_3__.FeatureLevel.Low ? 1 : pixelRatio);
+        const camera = _state__WEBPACK_IMPORTED_MODULE_3__.state.camera = new three__WEBPACK_IMPORTED_MODULE_9__.PerspectiveCamera(fov, aspect, near, far);
+        const scene = _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_9__.Scene();
+        const environment = new _environment__WEBPACK_IMPORTED_MODULE_4__.Environment({
+            scene,
+            camera,
+            renderer
+        });
+        scene.add(environment);
+        // CONTROLS
+        let controls = _state__WEBPACK_IMPORTED_MODULE_3__.state.controls = new _controls__WEBPACK_IMPORTED_MODULE_0__.VoxelMapControls(camera, renderer.domElement);
+        // MAP
+        const map = _state__WEBPACK_IMPORTED_MODULE_3__.state.map = new _map__WEBPACK_IMPORTED_MODULE_1__.MapManager({
+            camera
+        });
+        scene.add(map);
+        // RENDER LOOP
+        let prevFrameTime = +new Date();
+        function render() {
+            let now = +new Date();
+            let frameTimeDelta = now - prevFrameTime;
+            let frameDelta = frameTimeDelta / (1000 / 60);
+            requestAnimationFrame(render);
+            environment.update(frameDelta);
+            map.update();
+            controls.update();
+            renderer.render(scene, camera);
+            prevFrameTime = now;
+        }
+        function updateRenderSize() {
+            aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener("resize", updateRenderSize);
+        (0,_gui__WEBPACK_IMPORTED_MODULE_2__.createGui)({
+            scene,
+            camera,
+            renderer
+        });
+        window.state = _state__WEBPACK_IMPORTED_MODULE_3__.state;
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker.start();
+        updateRenderSize();
         requestAnimationFrame(render);
-        environment.update(frameDelta);
-        map.update();
-        controls.update();
-        renderer.render(scene, camera);
-        prevFrameTime = now;
-    }
-    function updateRenderSize() {
-        aspect = window.innerWidth / window.innerHeight;
-        camera.aspect = aspect;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener("resize", updateRenderSize);
-    (0,_gui__WEBPACK_IMPORTED_MODULE_2__.createGui)({
-        scene,
-        camera,
-        renderer
     });
-    window.state = _state__WEBPACK_IMPORTED_MODULE_3__.state;
-    _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker.start();
-    updateRenderSize();
-    requestAnimationFrame(render);
 }
 main();
 

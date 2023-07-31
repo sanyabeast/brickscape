@@ -5,134 +5,76 @@ import { IBlockCreationSourceParams } from './rules';
 import Alea from 'alea'
 import { NoiseFunction2D, NoiseFunction3D, NoiseFunction4D, createNoise2D, createNoise3D, createNoise4D } from 'simplex-noise';
 import { isNumber } from 'lodash';
-import { textureLoader } from './loaders';
-import { getPixelBrightness, getPixelBrightness2, waitForCallback } from './utils';
-import { Texture } from 'three';
+import { perlin3D } from '@leodeslf/perlin-noise'
+import { clamp } from './utils';
 
-let perlinTexture32_1: Texture = null
-let voronoTextureA: Text
+const _noiseSeedMultipier = 0.12345678
 
 export class GenerationHelper {
-    static async init() {
-        await waitForCallback((resolve) => {
-            perlinTexture32_1 = textureLoader.load('assets/noise/perlin.32_1.png', resolve)
-        })
 
-        await waitForCallback((resolve) => {
-            perlinTexture32_1 = textureLoader.load('assets/noise/voronoi_a.png', resolve)
-        })
+    _seed: number = 0
 
-        console.log(perlinTexture32_1)
-    }
+    _simplex2D: NoiseFunction2D
+    _simplex3D: NoiseFunction3D
 
-    seed: number = 0
-
-    simplex2D: NoiseFunction2D
-    simplex3D: NoiseFunction3D
-    simplex4D: NoiseFunction4D
-
-    alea: () => number
+    _alea: () => number
 
     constructor(seed: number) {
-        this.seed = seed
-        this.alea = Alea(seed.toString())
-        this.simplex2D = createNoise2D(this.alea)
-        this.simplex3D = createNoise3D(this.alea)
-        this.simplex4D = createNoise4D(this.alea)
+        this._seed = seed
+        this._alea = Alea(seed.toString())
+        this._simplex2D = createNoise2D(this._alea)
+        this._simplex3D = createNoise3D(this._alea)
     }
-
-    _getTextureValue2D(texture: Texture, seed, x, y) {
-        let img = texture.source.data
-        let width = img.width
-        let height = img.height
-        let offsetX = (this.seed + seed) % width
-        let offsetY = Math.floor((this.seed + seed) / width)
-        let px = ((x / 1) + offsetX) % width
-        let py = ((y / 1) + offsetY) % height
-        let brightness = getPixelBrightness2(texture.source.data, px, py)
-        // console.log('gen', px, py, brightness)
-
-        return brightness
-    }
-
     random() {
-        return this.alea()
+        return this._alea()
     }
 
     dice(bias: number = 0.5) {
         return this.random() > bias
     }
 
-    createSimplex2D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
+    simplex(x: number, y: number, params: IBlockCreationSourceParams): number {
         let s = isNumber(params.scale) ? params.scale : 1
-        let v = this.simplex2D(x * s, y * s)
-        let iterations = isNumber(params.iterations) ? params.iterations : 0
-        let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
-
-        for (let i = 0; i < iterations; i++) {
-            s /= scaleStep
-            v += this.simplex2D(x * s, y * s)
-        }
-
-        v /= (iterations + 1)
-
-        return v
-    }
-
-    createSimplex3D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
-        let s = isNumber(params.scale) ? params.scale : 1
-        let v = this.simplex3D(x * s, y * s, z * s)
+        let seed = isNumber(params.seed) ? (params.seed * _noiseSeedMultipier) : 0
+        let addent = isNumber(params.addent) ? params.addent : 0
+        let v = this._simplex3D(x * s, y * s, seed)
 
         let iterations = isNumber(params.iterations) ? params.iterations : 0
         let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
+        let multiplier = isNumber(params.multiplier) ? params.multiplier : 1
 
         for (let i = 0; i < iterations; i++) {
-            s /= scaleStep
-            v += this.simplex3D(x * s, y * s, z * s)
+            s *= scaleStep
+            v += this._simplex3D(x * s, y * s, seed)
         }
 
         v /= (iterations + 1)
+        v += addent
+        v *= multiplier
 
-        return v
+        return clamp(v, 0, 1)
     }
 
-    createSimplex4D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
+    perlin(x: number, y: number, params: IBlockCreationSourceParams): number {
         let s = isNumber(params.scale) ? params.scale : 1
-        let t = isNumber(params.time) ? params.time : 1
-        let v = this.simplex3D(x * s, y * s, z * s)
+        let seed = isNumber(params.seed) ? (params.seed * _noiseSeedMultipier) : 0
+        let addent = isNumber(params.addent) ? params.addent : 0
+        let v = perlin3D(x * s, y * s, this._seed + seed)
 
         let iterations = isNumber(params.iterations) ? params.iterations : 0
         let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
+        let multiplier = isNumber(params.multiplier) ? params.multiplier : 1
 
         for (let i = 0; i < iterations; i++) {
-            s /= scaleStep
-            v += this.simplex4D(x * s, y * s, z * s, t)
+            s *= scaleStep
+            v = (v + perlin3D(x * s, y * s, this._seed + seed)) / 2
         }
 
-        v /= (iterations + 1)
+        v += 0.5
+        v += addent
+        v *= multiplier
 
-        return v
-    }
-
-    createPerlin4D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
-        let textureValue = this._getTextureValue2D(perlinTexture32_1, 0, x, z)
-        console.log(textureValue)
-        // let s = isNumber(params.scale) ? params.scale : 1
-        // let t = isNumber(params.time) ? params.time : 1
-        // let v = this.simplex3D(x * s, y * s, z * s)
-
-        // let iterations = isNumber(params.iterations) ? params.iterations : 0
-        // let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
-
-        // for (let i = 0; i < iterations; i++) {
-        //     s /= scaleStep
-        //     v += this.simplex4D(x * s, y * s, z * s, t)
-        // }
-
-        // v /= (iterations + 1)
-
-        // return v
-        return 1
+        return clamp(v, 0, 1)
     }
 }
 

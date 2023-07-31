@@ -1,4 +1,5 @@
 import { BlockType } from "./blocks"
+import { state } from "./state"
 
 export enum EBlockReplacingStrategy {
     DontReplace,
@@ -19,22 +20,17 @@ export interface IBlocksGenerationRule {
 
 export enum EBlockCreationSource {
     Constant,
-    Simplex3D,
-    Simplex4D,
-    Perlin4D
+    Simplex,
+    Perlin
 }
 
 export interface IBlockCreationSourceParams {
-    /** for constant */
-    count?: number
-    /** for noise */
+    seed?: number
     scale?: number
-    /** for noise */
     iterations?: number
-    /** for noise */
     scaleStep?: number,
-    /** for 4D noises */
-    time?: number
+    multiplier?: number
+    addent?: number
 }
 
 export interface IBlockCreationLevels {
@@ -44,7 +40,6 @@ export interface IBlockCreationLevels {
 
 export interface IBlockCreationRule {
     source: EBlockCreationSource
-    ratio: number
     params: IBlockCreationSourceParams
     replace: EBlockReplacingStrategy
     levels: IBlockCreationLevels[]
@@ -64,7 +59,6 @@ export const rules: IBlocksGenerationRule[] = [
         create: [
             {
                 source: EBlockCreationSource.Constant,
-                ratio: 0.5,
                 replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                     min: 0,
@@ -75,50 +69,109 @@ export const rules: IBlocksGenerationRule[] = [
         ]
     },
 
+    // {
+    //     structure: getSingleBlockStructure(BlockType.Rock),
+    //     create: [
+    //         {
+    //             source: EBlockCreationSource.Simplex,
+    //             replace: EBlockReplacingStrategy.Stack,
+    //             levels: [{
+    //                 min: 0,
+    //                 max: 8
+    //             }],
+    //             params: { scale: 0.1, iterations: 0, scaleStep: 2, time: 1.21331 }
+    //         },
+    //     ]
+    // },
+
     {
-        structure: getSingleBlockStructure(BlockType.Rock),
+        structure: getSingleBlockStructure(BlockType.Gravel),
         create: [
             {
-                source: EBlockCreationSource.Perlin4D,
-                ratio: 1,
+                source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.Stack,
                 levels: [{
                     min: 0,
                     max: 8
                 }],
-                params: { scale: 0.05, iterations: 0, scaleStep: 2, time: 1.21331 }
+                params: { scale: 0.02, iterations: 0, scaleStep: 1.11, seed: 10, addent: -0.3 }
             },
         ]
     },
 
-    // {
-    //     structure: getSingleBlockStructure(BlockType.Dirt),
-    //     create: [
-    //         {
-    //             source: EBlockCreationSource.Simplex4D,
-    //             ratio: 0.2,
-    //             replace: EBlockReplacingStrategy.Stack,
-    //             levels: [{
-    //                 min: 4,
-    //                 max: 8
-    //             }],
-    //             params: { scale: 0.1, iterations: 3, scaleStep: 2, time: 5.55454 }
-    //         },
-    //     ]
-    // },
+
+    {
+        structure: getSingleBlockStructure(BlockType.Dirt),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                    min: 0,
+                    max: 8
+                }],
+                params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 115, addent: -0.4, multiplier: 1.5 }
+            },
+        ]
+    },
+
+    {
+        structure: getSingleBlockStructure(BlockType.Sand),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.OnlyReplace,
+                levels: [{
+                    min: 0,
+                    max: 3
+                }],
+                params: { scale: 0.01, iterations: 0, scaleStep: 1.11, seed: 115, addent: 0.5, multiplier: 2 }
+            },
+        ]
+    },
+
+    {
+        structure: getSingleBlockStructure(BlockType.Dirt),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.OnlyReplace,
+                levels: [{
+                    min: 6,
+                    max: state.worldHeight
+                }],
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 2234, addent: 0.5 }
+            },
+        ]
+    },
+
+    {
+        structure: getSingleBlockStructure(BlockType.Rock),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.Stack,
+                levels: [{
+                    min: 10,
+                    max: state.worldHeight
+                }],
+                params: { scale: 0.1, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.9, multiplier: 2 }
+            },
+        ]
+    },
+
 
     {
         structure: getSingleBlockStructure(BlockType.Water),
         create: [
             {
                 source: EBlockCreationSource.Constant,
-                ratio: 0.5,
                 replace: EBlockReplacingStrategy.DontReplace,
                 levels: [{
                     min: 1,
-                    max: 4
+                    max: 3
                 }],
-                params: { count: 3 }
+                params: {}
             }
         ]
     },
