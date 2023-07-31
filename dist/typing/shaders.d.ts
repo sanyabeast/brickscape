@@ -25,3 +25,4 @@ export declare class VoxelBlockPhongMaterial extends MeshLambertMaterial {
  * @returns {Material} - The base material.
  */
 export declare function getBlockBaseMaterial(): Material;
+export declare function updateGlobalUniforms(frameDelta: number): void;

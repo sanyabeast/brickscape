@@ -34,6 +34,8 @@ export interface IBlockCreationRule {
     source: EBlockCreationSource;
     params: IBlockCreationSourceParams;
     replace: EBlockReplacingStrategy;
+    replaceInclude?: BlockType[];
+    replaceExclude?: BlockType[];
     levels: IBlockCreationLevels[];
 }
 export declare const rules: IBlocksGenerationRule[];

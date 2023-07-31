@@ -17365,6 +17365,7 @@ var BlockType;
     BlockType[BlockType["Sand"] = 4] = "Sand";
     BlockType[BlockType["Bedrock"] = 5] = "Bedrock";
     BlockType[BlockType["Water"] = 6] = "Water";
+    BlockType[BlockType["Pumpkin"] = 7] = "Pumpkin";
 })(BlockType || (BlockType = {}));
 const blockTable = {
     [BlockType.None]: {
@@ -17387,6 +17388,10 @@ const blockTable = {
     },
     [BlockType.Water]: {
         tile: [15, 13]
+    },
+    [BlockType.Pumpkin]: {
+        tile: [8, 7],
+        light: true
     }
 };
 class Block {
@@ -17409,6 +17414,9 @@ class Block {
     }
     get tileY() {
         return blockTable[this.btype].tile[1];
+    }
+    get isLightSource() {
+        return blockTable[this.btype].light === true;
     }
     constructor({ x, y, z, chunk, lightness, blockType }) {
         // if (_blockManager.getBlockAt(x, y, z)) {
@@ -17864,20 +17872,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   Environment: () => (/* binding */ Environment)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! three/examples/jsm/objects/LensFlare */ "./node_modules/three/examples/jsm/objects/LensFlare.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three/examples/jsm/objects/LensFlare */ "./node_modules/three/examples/jsm/objects/LensFlare.js");
 /* harmony import */ var _loaders__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./loaders */ "./src/loaders.ts");
 /* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_3__);
 
 
 
 
 
-
-const _envUpdateRateLimit = 15;
 const flaresTable = [
     {
         texture: 'assets/flares/lensflare0.png',
@@ -17910,44 +17914,43 @@ const flaresTable = [
         color: 0xFFFFFF,
     }
 ];
-class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
+class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
     constructor({ scene, camera, renderer }) {
         super();
         this.sun = null;
         this.ambient = null;
         this.fog = null;
-        this.daytime = 0.9;
+        this.daytime = 0.8;
         this.dayspeed = 1 / 2048;
-        this.sunRotationRadius = _state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
-        this.sunElevation = 1;
+        this.sunRotationRadius = (_state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) * 4;
+        this.sunElevation = 2;
         this.minSunIntensity = -0.5;
         this.maxSunIntensity = 0.5;
         this.minAmbIntensity = 0.01;
         this.maxAmbIntensity = 0.5;
-        this.fog = new three__WEBPACK_IMPORTED_MODULE_4__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_4__.Color(0x777777), 0.005);
+        this.fog = new three__WEBPACK_IMPORTED_MODULE_3__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_3__.Color(0x777777), 0.005);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             scene.fog = this.fog;
         }
-        let sun = this.sun = new three__WEBPACK_IMPORTED_MODULE_4__.DirectionalLight(0xfffeee, 1);
+        let sun = this.sun = new three__WEBPACK_IMPORTED_MODULE_3__.DirectionalLight(0xfffeee, 1);
         sun.position.set(0.5, 1, -0.5);
         this.add(sun);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             Environment.addFlares(sun, this);
         }
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel == 0) {
-            this.ambient = new three__WEBPACK_IMPORTED_MODULE_4__.AmbientLight(0xffffff, 0.2);
+            this.ambient = new three__WEBPACK_IMPORTED_MODULE_3__.AmbientLight(0xffffff, 0.2);
             this.add(this.ambient);
         }
         // Create the lens flare object
         let envMap = _loaders__WEBPACK_IMPORTED_MODULE_0__.rgbeLoader.load('assets/hdr/quarry.hdr', () => {
-            envMap.mapping = three__WEBPACK_IMPORTED_MODULE_4__.EquirectangularReflectionMapping;
-            envMap.colorSpace = three__WEBPACK_IMPORTED_MODULE_4__.SRGBColorSpace;
+            envMap.mapping = three__WEBPACK_IMPORTED_MODULE_3__.EquirectangularReflectionMapping;
+            envMap.colorSpace = three__WEBPACK_IMPORTED_MODULE_3__.SRGBColorSpace;
             scene.background = envMap;
             scene.environment = envMap;
             scene.backgroundIntensity = 1;
             scene.backgroundBlurriness = 1;
         });
-        this.update = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.throttle)(this.update.bind(this), 1000 / _envUpdateRateLimit);
         this.update(0);
     }
     update(frameDelta) {
@@ -17980,11 +17983,11 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_4__.Group {
         this.daytime += this.dayspeed * frameDelta;
     }
     static addFlares(light, scene, count = 5) {
-        const lensflare = new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_5__.Lensflare();
+        const lensflare = new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_4__.Lensflare();
         flaresTable.forEach((flareData, index) => {
             if (index < count) {
                 const lensFlareTexture = _loaders__WEBPACK_IMPORTED_MODULE_0__.textureLoader.load(flareData.texture);
-                lensflare.addElement(new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_5__.LensflareElement(lensFlareTexture, flareData.size, flareData.distance, new three__WEBPACK_IMPORTED_MODULE_4__.Color(0xffffff)));
+                lensflare.addElement(new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_4__.LensflareElement(lensFlareTexture, flareData.size, flareData.distance, new three__WEBPACK_IMPORTED_MODULE_3__.Color(0xffffff)));
                 // lensflare.position.copy(light.position);
                 console.log(lensflare);
             }
@@ -18459,6 +18462,21 @@ const rules = [
             }
         ]
     },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Pumpkin),
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Stack,
+                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
+                levels: [{
+                        min: 10,
+                        max: 11
+                    }],
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.88, multiplier: 0.6 }
+            },
+        ]
+    },
 ];
 
 
@@ -18476,7 +18494,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   VoxelBlockLamberMaterial: () => (/* binding */ VoxelBlockLamberMaterial),
 /* harmony export */   VoxelBlockPhongMaterial: () => (/* binding */ VoxelBlockPhongMaterial),
 /* harmony export */   VoxelBlockStandardMaterial: () => (/* binding */ VoxelBlockStandardMaterial),
-/* harmony export */   getBlockBaseMaterial: () => (/* binding */ getBlockBaseMaterial)
+/* harmony export */   getBlockBaseMaterial: () => (/* binding */ getBlockBaseMaterial),
+/* harmony export */   updateGlobalUniforms: () => (/* binding */ updateGlobalUniforms)
 /* harmony export */ });
 /* harmony import */ var three__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state */ "./src/state.ts");
@@ -18484,10 +18503,16 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+let _shaderTime = 0;
 // Texture loader for loading the tilemap texture
 let _textureLoader = new three__WEBPACK_IMPORTED_MODULE_2__.TextureLoader();
 let _tilemap = _textureLoader.load('assets/tiles.png');
-_tilemap.flipY = false;
+let _tilemapB = _textureLoader.load('assets/tiles_b.png');
+_tilemap.flipY = _tilemapB.flipY = false;
+_tilemapB.minFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
+_tilemap.minFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
+_tilemapB.magFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
+_tilemap.magFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
 /**
  * Patch the material with custom shaders and uniforms.
  * @param {ShaderMaterial} mat - The material to be patched.
@@ -18501,7 +18526,10 @@ function _patchMaterial(mat, hooks) {
         uNear: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.near },
         uMaxInstances: { value: _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.maxBlocksPerChunk },
         uTiles: { value: _tilemap },
+        uTIlesAnim: { value: _tilemapB },
         uTileSize: { value: 1 / 16 },
+        uTime: { value: 0 },
+        uResolution: { value: new three__WEBPACK_IMPORTED_MODULE_2__.Vector2() }
     };
     // Assign the vertex shader and fragment shader through onBeforeCompile
     mat.onBeforeCompile = (shader) => {
@@ -18511,7 +18539,35 @@ function _patchMaterial(mat, hooks) {
         shader.uniforms.uNear = mat.uniforms.uNear;
         shader.uniforms.uMaxInstances = mat.uniforms.uMaxInstances;
         shader.uniforms.uTiles = mat.uniforms.uTiles;
+        shader.uniforms.uTIlesAnim = mat.uniforms.uTIlesAnim;
         shader.uniforms.uTileSize = mat.uniforms.uTileSize;
+        shader.uniforms.uTime = {
+            get value() {
+                return _shaderTime;
+            },
+            get needsUpdate() {
+                return true;
+            }
+        };
+        shader.uniforms.uPixelRatio = {
+            get value() {
+                return window.devicePixelRatio;
+                // return state.renderer.getPixelRatio()
+            },
+            get needsUpdate() {
+                return true;
+            }
+        };
+        let _resVector = new three__WEBPACK_IMPORTED_MODULE_2__.Vector2(0, 0);
+        shader.uniforms.uResolution = {
+            get value() {
+                _resVector.set(_state__WEBPACK_IMPORTED_MODULE_0__.state.canvas.width, _state__WEBPACK_IMPORTED_MODULE_0__.state.canvas.height);
+                return _resVector;
+            },
+            get needsUpdate() {
+                return true;
+            }
+        };
         console.log(shader.vertexShader);
         console.log(shader.fragmentShader);
         // Replace hooks in the vertex shader with custom code
@@ -18547,7 +18603,11 @@ function _patchMaterial(mat, hooks) {
         uniform float uNear;
         uniform float uMaxInstances;
         uniform sampler2D uTiles;
+        uniform sampler2D uTIlesAnim;
         uniform float uTileSize;
+        uniform float uTime;
+        uniform vec2 uResolution;
+        uniform float uPixelRatio;
         
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -18563,15 +18623,28 @@ function _patchMaterial(mat, hooks) {
         shader.fragmentShader = shader.fragmentShader.replace(hooks[5], `
         vec2 tileUV = vec2(vInstanceData.x * uTileSize + (vUv.x * uTileSize), vInstanceData.y * uTileSize + (vUv.y * uTileSize));
         vec4 tileColor = texture2D(uTiles, tileUV);
+        vec4 tileColorAnim = texture2D(uTIlesAnim, tileUV);
 
-        // Use linear depth to fade objects in the distance
-        diffuseColor.rgb *= tileColor.xyz;
+        float animProgress = clamp((sin(uTime * 32.) + 1.) / 2., 0., 1.);
+        diffuseColor.rgb *= mix(tileColor.rgb, tileColorAnim.rgb, animProgress);
+        if ((fract(gl_FragCoord.y / 2.) + fract(gl_FragCoord.x / 2.)) / 2. >tileColor.a){
+          discard;
+        }
       `);
         shader.fragmentShader = shader.fragmentShader.replace(hooks[6], `
         #include <aomap_fragment>
         reflectedLight.directDiffuse *= pow(vInstanceData.z, 2.);
         reflectedLight.indirectDiffuse *= pow(vInstanceData.z, 2.);
       `);
+        shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', `
+      #include <emissivemap_fragment>
+      totalEmissiveRadiance.rgb = mix(
+          vec3(0.), 
+          diffuseColor.rgb, 
+          clamp(vInstanceData.z - 1., 0., 1.)
+      );
+
+    `);
         // shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
         //     #include <transmission_fragment>
         //     totalDiffuse *= pow(vInstanceData.z, 1.);
@@ -18657,6 +18730,9 @@ function getBlockBaseMaterial() {
     // Return either VoxelBlockLamberMaterial or VoxelBlockStandardMaterial based on the feature level
     return _state__WEBPACK_IMPORTED_MODULE_0__.featureLevel === _state__WEBPACK_IMPORTED_MODULE_0__.FeatureLevel.Low ? new VoxelBlockLamberMaterial() : new VoxelBlockStandardMaterial();
 }
+function updateGlobalUniforms(frameDelta) {
+    _shaderTime = _shaderTime + (frameDelta / 1000);
+}
 
 
 /***/ }),
@@ -18688,9 +18764,9 @@ let featureLevel = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.isMobileDevice)() ? Fe
 const state = {
     maxChunksInMemory: 512,
     seed: 12,
-    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
+    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
-    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Prism6,
+    blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Cube,
     worldHeight: 16,
     camera: null,
     scene: null,
@@ -19133,12 +19209,45 @@ class WorldManager {
                         blocksCount = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(blocksCount, 0, _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight);
                         blocksCount = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(blocksCount, 0, levelHeight);
                         for (let y = level.min; y < level.min + blocksCount; y++) {
-                            this._placeStructure(x, y, z, rule.structure, creationRule.replace);
+                            let replaceAllowed = this._testReplaceRestrictions(x, y, z, creationRule);
+                            if (replaceAllowed) {
+                                this._placeStructure(x, y, z, rule.structure, creationRule.replace);
+                            }
                         }
                     });
                 });
             }
         });
+    }
+    _testReplaceRestrictions(x, y, z, creationRule) {
+        let elevation = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z);
+        if (elevation > 0) {
+            let block = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getBlockAt(x, elevation, z);
+            if (creationRule.replaceInclude) {
+                let included = false;
+                for (let i = 0; i < creationRule.replaceInclude.length; i++) {
+                    if (block.btype === creationRule.replaceInclude[i]) {
+                        included = true;
+                        break;
+                    }
+                }
+                return included;
+            }
+            if (creationRule.replaceExclude) {
+                let excluded = false;
+                for (let i = 0; i < creationRule.replaceExclude.length; i++) {
+                    if (block.btype === creationRule.replaceExclude[i]) {
+                        excluded = true;
+                        break;
+                    }
+                }
+                return !excluded;
+            }
+            return true;
+        }
+        else {
+            return true;
+        }
     }
     _placeStructure(x, y, z, structure, replaceStrategy) {
         structure.forEach((placement, index) => {
@@ -19221,20 +19330,27 @@ class WorldManager {
         _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
             if (block) {
                 let lightness = 1;
-                let sibDistance = 2;
-                block.iterateSiblings(sibDistance, (dx, dy, dz, block) => {
-                    if (block) {
-                        let shadingFactor = 0;
-                        if (dy >= 1) {
-                            shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5);
-                            shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5);
-                            shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5);
-                            shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5);
-                            shadingFactor /= 4;
+                if (block.isLightSource) {
+                    lightness = 1.5;
+                }
+                else {
+                    let sibDistance = 2;
+                    block.iterateSiblings(sibDistance, (dx, dy, dz, block) => {
+                        if (block) {
+                            if (!block.isLightSource) {
+                                let shadingFactor = 0;
+                                if (dy >= 1) {
+                                    shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5);
+                                    shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5);
+                                    shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5);
+                                    shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5);
+                                    shadingFactor /= 4;
+                                }
+                                lightness *= (0,_utils__WEBPACK_IMPORTED_MODULE_5__.lerp)(1, 0.95, shadingFactor);
+                            }
                         }
-                        lightness *= (0,_utils__WEBPACK_IMPORTED_MODULE_5__.lerp)(1, 0.95, shadingFactor);
-                    }
-                });
+                    });
+                }
                 let blockChanged = block.update({
                     lightness,
                     blockType: block.btype
@@ -81634,7 +81750,7 @@ var __webpack_exports__ = {};
   !*** ./src/index.ts ***!
   \**********************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _controls__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./controls */ "./src/controls.ts");
 /* harmony import */ var _map__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map */ "./src/map.ts");
 /* harmony import */ var _gui__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gui */ "./src/gui.ts");
@@ -81644,6 +81760,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
 /* harmony import */ var _world__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./world */ "./src/world.ts");
 /* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+/* harmony import */ var _shaders__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./shaders */ "./src/shaders.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -81653,6 +81770,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+
 
 
 
@@ -81675,10 +81793,10 @@ function main() {
         const far = 2048;
         let aspect = 2; // the canvas default
         const canvas = _state__WEBPACK_IMPORTED_MODULE_3__.state.canvas = document.querySelector('#c');
-        const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new three__WEBPACK_IMPORTED_MODULE_9__.WebGLRenderer({ canvas });
+        const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new three__WEBPACK_IMPORTED_MODULE_10__.WebGLRenderer({ canvas, antialias: _state__WEBPACK_IMPORTED_MODULE_3__.featureLevel != _state__WEBPACK_IMPORTED_MODULE_3__.FeatureLevel.Low });
         renderer.setPixelRatio(_state__WEBPACK_IMPORTED_MODULE_3__.featureLevel == _state__WEBPACK_IMPORTED_MODULE_3__.FeatureLevel.Low ? 1 : pixelRatio);
-        const camera = _state__WEBPACK_IMPORTED_MODULE_3__.state.camera = new three__WEBPACK_IMPORTED_MODULE_9__.PerspectiveCamera(fov, aspect, near, far);
-        const scene = _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_9__.Scene();
+        const camera = _state__WEBPACK_IMPORTED_MODULE_3__.state.camera = new three__WEBPACK_IMPORTED_MODULE_10__.PerspectiveCamera(fov, aspect, near, far);
+        const scene = _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_10__.Scene();
         const environment = new _environment__WEBPACK_IMPORTED_MODULE_4__.Environment({
             scene,
             camera,
@@ -81699,6 +81817,7 @@ function main() {
             let frameTimeDelta = now - prevFrameTime;
             let frameDelta = frameTimeDelta / (1000 / 60);
             requestAnimationFrame(render);
+            (0,_shaders__WEBPACK_IMPORTED_MODULE_9__.updateGlobalUniforms)(frameDelta);
             environment.update(frameDelta);
             map.update();
             controls.update();
