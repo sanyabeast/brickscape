@@ -20,7 +20,8 @@ export interface IBlocksGenerationRule {
 export enum EBlockCreationSource {
     Constant,
     Simplex3D,
-    Simplex4D
+    Simplex4D,
+    Perlin4D
 }
 
 export interface IBlockCreationSourceParams {
@@ -78,33 +79,33 @@ export const rules: IBlocksGenerationRule[] = [
         structure: getSingleBlockStructure(BlockType.Rock),
         create: [
             {
-                source: EBlockCreationSource.Simplex4D,
-                ratio: 0.1,
+                source: EBlockCreationSource.Perlin4D,
+                ratio: 1,
                 replace: EBlockReplacingStrategy.Stack,
                 levels: [{
                     min: 0,
-                    max: 6
+                    max: 8
                 }],
                 params: { scale: 0.05, iterations: 0, scaleStep: 2, time: 1.21331 }
             },
         ]
     },
 
-    {
-        structure: getSingleBlockStructure(BlockType.Dirt),
-        create: [
-            {
-                source: EBlockCreationSource.Simplex4D,
-                ratio: 0.2,
-                replace: EBlockReplacingStrategy.Stack,
-                levels: [{
-                    min: 4,
-                    max: 8
-                }],
-                params: { scale: 0.1, iterations: 3, scaleStep: 2, time: 5.55454 }
-            },
-        ]
-    },
+    // {
+    //     structure: getSingleBlockStructure(BlockType.Dirt),
+    //     create: [
+    //         {
+    //             source: EBlockCreationSource.Simplex4D,
+    //             ratio: 0.2,
+    //             replace: EBlockReplacingStrategy.Stack,
+    //             levels: [{
+    //                 min: 4,
+    //                 max: 8
+    //             }],
+    //             params: { scale: 0.1, iterations: 3, scaleStep: 2, time: 5.55454 }
+    //         },
+    //     ]
+    // },
 
     {
         structure: getSingleBlockStructure(BlockType.Water),

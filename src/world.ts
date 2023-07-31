@@ -152,6 +152,9 @@ export class WorldManager {
             case EBlockCreationSource.Simplex4D: {
                 return generationHelper.createSimplex3D(x, y, z, creationRule.params) * creationRule.ratio
             }
+            case EBlockCreationSource.Perlin4D: {
+                return generationHelper.createPerlin4D(x, y, z, creationRule.params) * creationRule.ratio
+            }
             case EBlockCreationSource.Constant: {
                 let count = isNumber(creationRule.params.count) ? creationRule.params.count : 1
                 return count

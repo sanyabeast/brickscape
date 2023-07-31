@@ -10,7 +10,9 @@ import { worldManager } from './world';
 import { blockManager } from './blocks';
 
 
-function main() {
+async function main() {
+
+    await GenerationHelper.init()
 
     state.generator = generationHelper
     state.tasker = tasker

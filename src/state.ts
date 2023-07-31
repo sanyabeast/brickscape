@@ -19,7 +19,7 @@ export let featureLevel = isMobileDevice() ? FeatureLevel.Low : FeatureLevel.Mid
 
 interface IAppState {
     maxChunksInMemory: number
-    seed: string,
+    seed: number,
     chunkSize: number,
     drawChunks: number
     blockShape: BlockShape
@@ -38,9 +38,9 @@ interface IAppState {
 
 export const state: IAppState = {
     maxChunksInMemory: 512,
-    seed: 'asda12q1f',
+    seed: 12,
     chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
-    drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
+    drawChunks: featureLevel == FeatureLevel.Low ? 2 : 1,
     blockShape: BlockShape.Cube,
     worldHeight: 12,
     camera: null,
