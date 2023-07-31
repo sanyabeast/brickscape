@@ -1,9 +1,10 @@
+import { isNumber } from "lodash"
 import { Block, BlockType, blockManager } from "./blocks"
 import { generationHelper } from "./generator"
 import { EBlockCreationSource, EBlockReplacingStrategy, IBlockCreationLevels, IBlockCreationRule, IBlockPlacement, rules } from "./rules"
 import { featureLevel, state } from "./state"
 import { QueueType, tasker } from "./tasker"
-import { getChunkId, lerp, logd } from "./utils"
+import { clamp, getChunkId, lerp, logd } from "./utils"
 
 export class WorldManager {
     static instance: WorldManager = null
@@ -63,12 +64,18 @@ export class WorldManager {
             for (let ir = 0; ir < rule.create.length; ir++) {
                 let creationRule: IBlockCreationRule = rule.create[ir]
                 blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
-                    if (this._testLevels(y, creationRule.levels)) {
-                        if (this._testCreationRule(x, y, z, creationRule)) {
-                            this._placeStructure(x, y, z, rule.structure, creationRule.replace)
-                        }
-                    }
+                    creationRule.levels.forEach((level: IBlockCreationLevels) => {
+                        if (y >= level.min && y < level.max) {
+                            let levelHeight = level.max - level.min
+                            let blocksCount = this._testCreationRule(x, y, z, creationRule);
+                            blocksCount *= levelHeight
+                            blocksCount = clamp(blocksCount, 0, state.worldHeight)
 
+                            for (let nb = 0; nb < blocksCount; nb++) {
+                                this._placeStructure(x, y, z, rule.structure, creationRule.replace)
+                            }
+                        }
+                    })
                 })
             }
         })
@@ -121,7 +128,7 @@ export class WorldManager {
             }
             case EBlockReplacingStrategy.Stack: {
                 let elevation = blockManager.getElevationAt(x, z)
-                if (elevation < state.worldHeight) {
+                if (elevation < state.worldHeight - 1) {
                     new Block({
                         chunk: this,
                         x: x,
@@ -137,113 +144,22 @@ export class WorldManager {
 
     }
 
-    _testLevels(y: number, levels: IBlockCreationLevels[]): boolean {
-        for (let i = 0; i < levels.length; i++) {
-            let level = levels[i]
-            if (y >= level.min && y < level.max) {
-                return true
-            }
-        }
-        return false
-    }
-
-    _testCreationRule(x: number, y: number, z: number, creationRule: IBlockCreationRule): boolean {
+    _testCreationRule(x: number, y: number, z: number, creationRule: IBlockCreationRule): number {
         switch (creationRule.source) {
-            case EBlockCreationSource.Perlin3D: {
-                return generationHelper.getPerlin3DNoise(x, z, null, creationRule.params) < creationRule.ratio
+            case EBlockCreationSource.Simplex3D: {
+                return generationHelper.createSimplex3D(x, y, z, creationRule.params) * creationRule.ratio
             }
-            case EBlockCreationSource.Perlin4D: {
-                return generationHelper.getPerlin4DNoise(x, z, y, creationRule.params) < creationRule.ratio
+            case EBlockCreationSource.Simplex4D: {
+                return generationHelper.createSimplex3D(x, y, z, creationRule.params) * creationRule.ratio
             }
             case EBlockCreationSource.Constant: {
-                return true
+                let count = isNumber(creationRule.params.count) ? creationRule.params.count : 1
+                return count
             }
             default: {
-                return false;
+                return 0;
             }
         }
-    }
-
-    _generateChunk(cx: number, cz: number) {
-        logd('WorldManager._generateChunk', `start generating at [${cx}, ${cz}]`)
-        // bedrock level
-        blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            new Block({
-                chunk: this,
-                x: x,
-                y: 0,
-                z: z,
-                lightness: 1,
-                blockType: BlockType.Bedrock
-            })
-        })
-
-        // main perlin noise
-        blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            let noiseValue = state.generator.getPerlin3DNoise(
-                x,
-                z,
-                null,
-                {
-                    paramA: 4
-                })
-
-            let heightValue = Math.floor(state.worldHeight * noiseValue) + 1
-
-            for (let i = 1; i < heightValue - 1; i++) {
-                new Block({
-                    chunk: this,
-                    x: x,
-                    y: i,
-                    z: z,
-                    lightness: 1,
-                    blockType: BlockType.None
-                })
-            }
-        })
-
-        // watering
-
-        let waterLevel = 2
-
-        blockManager.traverseChunk2D(cx, cz, (x, z) => {
-            let existingBlock = blockManager.getBlockAt(x, waterLevel, z)
-            if (!existingBlock) {
-                new Block({
-                    chunk: this,
-                    x: x,
-                    y: waterLevel,
-                    z: z,
-                    lightness: 1,
-                    blockType: BlockType.Water
-                })
-            }
-        })
-
-        // types 
-
-        blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
-            if (block) {
-                if (block.btype === BlockType.None) {
-                    let blockType = BlockType.Dirt;
-                    if (block.by < 8 && Math.random() > 0.8) {
-                        blockType = BlockType.Rock
-                    } else if (block.by < 6 && Math.random() > 0.9) {
-                        blockType = BlockType.Gravel
-                    } else if (block.by < 6) {
-                        blockType = BlockType.Sand
-                    }
-
-                    let blockChanged = block.update({
-                        lightness: block.lightness,
-                        blockType
-                    })
-                }
-            }
-        })
-
-
-        this.updatedChunks.push([cx, cz])
     }
 
     _updateChunkLighting(cx: number, cz: number) {

@@ -12,26 +12,29 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.22.9",
     "@babel/preset-env": "^7.22.9",
+    "@leodeslf/perlin-noise": "^1.1.2",
     "@tweakpane/core": "^1.1.9",
+    "@types/lodash": "^4.14.195",
     "@types/node": "^20.4.4",
     "@types/three": "^0.154.0",
+    "alea": "^1.0.1",
     "babel-loader": "^9.1.3",
     "copy-webpack-plugin": "^11.0.0",
+    "lodash": "^4.17.21",
+    "three": "^0.154.0",
     "ts-loader": "^9.4.4",
+    "tweakpane": "^3.1.10",
     "typedoc": "^0.5.10",
     "typedoc-webpack-plugin": "^1.1.4",
     "typescript": "^5.1.6",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
-    "@leodeslf/perlin-noise": "^1.1.2",
-    "@types/lodash": "^4.14.195",
-    "lodash": "^4.17.21",
-    "three": "^0.154.0",
-    "tweakpane": "^3.1.10"
+    "webpack-dev-server": "^4.15.1"
+  },
+  "dependencies": {
+    "simplex-noise": "^4.0.1"
   }
 }

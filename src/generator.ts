@@ -1,91 +1,83 @@
 
 
-import { perlin3D, perlin4D } from '@leodeslf/perlin-noise';
-import { clamp } from 'lodash';
 import { state } from './state';
 import { IBlockCreationSourceParams } from './rules';
-
-export function SeededRandom(seed) {
-    const m = 0x80000000; // 2**31;
-    const a = 1103515245;
-    const c = 12345;
-
-    seed = seed || Math.floor(Math.random() * m);
-
-    return function () {
-        seed = (a * seed + c) % m;
-        return seed / m;
-    };
-}
+import Alea from 'alea'
+import { NoiseFunction2D, NoiseFunction3D, NoiseFunction4D, createNoise2D, createNoise3D, createNoise4D } from 'simplex-noise';
+import { isNumber } from 'lodash';
 
 export class GenerationHelper {
-    seed = null
-    _seededRandom = null;;
-    constructor(seed) {
-        this.seed = seed
-        this._seededRandom = SeededRandom(seed)
+    seed: string
+
+    simplex2D: NoiseFunction2D
+    simplex3D: NoiseFunction3D
+    simplex4D: NoiseFunction4D
+
+    alea: () => number
+    constructor(seed: string) {
+        this.alea = Alea(seed)
+        this.simplex2D = createNoise2D(this.alea)
+        this.simplex3D = createNoise3D(this.alea)
+        this.simplex4D = createNoise4D(this.alea)
     }
 
     random() {
-        return this._seededRandom()
+        return this.alea()
     }
 
     dice(bias: number = 0.5) {
         return this.random() > bias
     }
 
-    // getPerlin3DNoise(x, y, z, params: IBlockCreationSourceParams) {
-    //     let val = 0;
+    createSimplex2D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
+        let s = isNumber(params.scale) ? params.scale : 1
+        let v = this.simplex2D(x * s, y * s)
+        let iterations = isNumber(params.iterations) ? params.iterations : 0
+        let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
 
-    //     for (let i = 0; i < params.iterations; i++) {
-    //         const stepScale = 10 * Math.pow(2, i);
-    //         const valueScale = 1 + Math.pow(2, i);
-    //         val = (val + Math.abs(perlin3D(x / stepScale, y / stepScale, this.seed / stepScale) * valueScale)) / 2
-    //     }
-
-    //     val /= (params.iterations / 100)
-    //     val = clamp(val, 0, 1);
-
-    //     console.log(val)
-    //     return val
-    // }
-
-    getPerlin3DNoise(x, y, z, params: IBlockCreationSourceParams) {
-        let val = 0;
-
-        for (let i = 0; i < params.paramA; i++) {
-            let iterationVal = perlin3D(
-                x * params.paramB * (i + 1),
-                y * params.paramB * (i + 1),
-                (this.seed + params.paramD) * params.paramB * (i + 1)
-            ) * params.paramC
-            iterationVal = (iterationVal + 0.5)
-            val += iterationVal
+        for (let i = 0; i < iterations; i++) {
+            s /= scaleStep
+            v += this.simplex2D(x * s, y * s)
         }
 
-        val /= params.paramA
+        v /= (iterations + 1)
 
-        // console.log(val)
-        return val
+        return v
     }
 
-    getPerlin4DNoise(x, y, z, params: IBlockCreationSourceParams) {
-        let val = 0;
+    createSimplex3D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
+        let s = isNumber(params.scale) ? params.scale : 1
+        let v = this.simplex3D(x * s, y * s, z * s)
 
-        for (let i = 0; i < params.paramA; i++) {
-            let iterationVal = perlin4D(
-                x * params.paramB * (i + 1),
-                y * params.paramB * (i + 1),
-                z * params.paramB * (i + 1),
-                (this.seed + params.paramD) * params.paramB * (i + 1),
-            ) * params.paramC
-            iterationVal = (iterationVal + 0.5)
-            val += iterationVal
+        let iterations = isNumber(params.iterations) ? params.iterations : 0
+        let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
+
+        for (let i = 0; i < iterations; i++) {
+            s /= scaleStep
+            v += this.simplex3D(x * s, y * s, z * s)
         }
 
-        val /= params.paramA
+        v /= (iterations + 1)
 
-        return val
+        return v
+    }
+
+    createSimplex4D(x: number, y: number, z: number, params: IBlockCreationSourceParams): number {
+        let s = isNumber(params.scale) ? params.scale : 1
+        let t = isNumber(params.time) ? params.time : 1
+        let v = this.simplex3D(x * s, y * s, z * s)
+
+        let iterations = isNumber(params.iterations) ? params.iterations : 0
+        let scaleStep = isNumber(params.scaleStep) ? params.scaleStep : 0.5
+
+        for (let i = 0; i < iterations; i++) {
+            s /= scaleStep
+            v += this.simplex4D(x * s, y * s, z * s, t)
+        }
+
+        v /= (iterations + 1)
+
+        return v
     }
 }
 
