@@ -4,7 +4,7 @@ import { generationHelper } from "./generator"
 import { EBlockCreationSource, EBlockReplacingStrategy, IBlockCreationLevels, IBlockCreationRule, IBlockPlacement, rules } from "./rules"
 import { featureLevel, state } from "./state"
 import { QueueType, tasker } from "./tasker"
-import { clamp, getChunkId, lerp } from "./utils"
+import { clamp, distance, getChunkId, lerp } from "./utils"
 
 export class WorldManager {
     static instance: WorldManager = null
@@ -72,13 +72,53 @@ export class WorldManager {
                         blocksCount = clamp(blocksCount, 0, levelHeight);
 
                         for (let y = level.min; y < level.min + blocksCount; y++) {
-                            this._placeStructure(x, y, z, rule.structure, creationRule.replace)
+                            let replaceAllowed: boolean = this._testReplaceRestrictions(x, y, z, creationRule)
+                            if (replaceAllowed) {
+                                this._placeStructure(x, y, z, rule.structure, creationRule.replace)
+                            }
+
                         }
                     })
                 })
             }
         })
     }
+
+
+    _testReplaceRestrictions(x: number, y: number, z: number, creationRule: IBlockCreationRule): boolean {
+        let elevation = blockManager.getElevationAt(x, z)
+
+        if (elevation > 0) {
+            let block: Block = blockManager.getBlockAt(x, elevation, z)
+
+            if (creationRule.replaceInclude) {
+                let included = false
+                for (let i = 0; i < creationRule.replaceInclude.length; i++) {
+                    if (block.btype === creationRule.replaceInclude[i]) {
+                        included = true
+                        break
+                    }
+                }
+                return included
+            }
+
+            if (creationRule.replaceExclude) {
+                let excluded = false
+                for (let i = 0; i < creationRule.replaceExclude.length; i++) {
+                    if (block.btype === creationRule.replaceExclude[i]) {
+                        excluded = true;
+                        break
+                    }
+                }
+                return !excluded
+            }
+
+            return true
+        } else {
+            return true
+        }
+    }
+
 
     _placeStructure(x: number, y: number, z: number, structure: IBlockPlacement[], replaceStrategy: EBlockReplacingStrategy) {
         structure.forEach((placement: IBlockPlacement, index) => {
@@ -166,20 +206,30 @@ export class WorldManager {
         blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
             if (block) {
                 let lightness = 1
-                let sibDistance = 2
-                block.iterateSiblings(sibDistance, (dx, dy, dz, block) => {
-                    if (block) {
-                        let shadingFactor = 0
-                        if (dy >= 1) {
-                            shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5)
-                            shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5)
-                            shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5)
-                            shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5)
-                            shadingFactor /= 4
+                
+
+                if (block.isLightSource) {
+                    lightness = 1.5;
+                } else {
+                    let sibDistance = 2
+                    block.iterateSiblings(sibDistance, (dx, dy, dz, block) => {
+                        if (block) {
+                            if (!block.isLightSource) {
+                                let shadingFactor = 0
+                                if (dy >= 1) {
+                                    shadingFactor += Math.pow((dy + sibDistance) / (sibDistance * 2), 1.5)
+                                    shadingFactor += Math.pow(Math.abs(dx) / sibDistance, 1.5)
+                                    shadingFactor += Math.pow(Math.abs(dy) / sibDistance, 1.5)
+                                    shadingFactor += Math.pow(Math.abs(dz) / sibDistance, 1.5)
+                                    shadingFactor /= 4
+                                }
+                                lightness *= lerp(1, 0.95, shadingFactor);
+                            } 
+
                         }
-                        lightness *= lerp(1, 0.95, shadingFactor);
-                    }
-                })
+                    })
+                }
+
 
                 let blockChanged = block.update({
                     lightness,

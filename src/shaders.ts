@@ -1,11 +1,21 @@
-import { ShaderMaterial, Color, Vector3, TextureLoader, MeshStandardMaterial, MeshLambertMaterial, Material } from "three";
+import { Vector3, TextureLoader, MeshStandardMaterial, MeshLambertMaterial, Material, ShaderMaterial, Vector2, NearestFilter, LinearFilter, NearestMipMapLinearFilter } from "three";
 import { FeatureLevel, featureLevel, state } from "./state";
 import { blockManager } from "./blocks";
+
+let _shaderTime = 0
 
 // Texture loader for loading the tilemap texture
 let _textureLoader = new TextureLoader()
 let _tilemap = _textureLoader.load('assets/tiles.png')
-_tilemap.flipY = false
+let _tilemapB = _textureLoader.load('assets/tiles_b.png')
+
+
+_tilemap.flipY = _tilemapB.flipY = false
+_tilemapB.minFilter = NearestFilter
+_tilemap.minFilter = NearestFilter
+
+_tilemapB.magFilter = NearestFilter
+_tilemap.magFilter = NearestFilter
 
 /**
  * Patch the material with custom shaders and uniforms.
@@ -21,7 +31,11 @@ function _patchMaterial(mat, hooks: string[]) {
     uNear: { value: state.camera.near },
     uMaxInstances: { value: blockManager.maxBlocksPerChunk },
     uTiles: { value: _tilemap },
+    uTIlesAnim: { value: _tilemapB },
     uTileSize: { value: 1 / 16 },
+    uTime: { value: 0 },
+    uResolution: { value: new Vector2() }
+
   }
 
   // Assign the vertex shader and fragment shader through onBeforeCompile
@@ -32,7 +46,37 @@ function _patchMaterial(mat, hooks: string[]) {
     shader.uniforms.uNear = mat.uniforms.uNear;
     shader.uniforms.uMaxInstances = mat.uniforms.uMaxInstances;
     shader.uniforms.uTiles = mat.uniforms.uTiles;
+    shader.uniforms.uTIlesAnim = mat.uniforms.uTIlesAnim;
     shader.uniforms.uTileSize = mat.uniforms.uTileSize;
+    shader.uniforms.uTime = {
+      get value() {
+        return _shaderTime
+      },
+      get needsUpdate() {
+        return true
+      }
+    }
+
+    shader.uniforms.uPixelRatio = {
+      get value() {
+        return window.devicePixelRatio
+        // return state.renderer.getPixelRatio()
+      },
+      get needsUpdate() {
+        return true
+      }
+    }
+
+    let _resVector = new Vector2(0, 0)
+    shader.uniforms.uResolution = {
+      get value() {
+        _resVector.set(state.canvas.width, state.canvas.height)
+        return _resVector
+      },
+      get needsUpdate() {
+        return true
+      }
+    }
 
     console.log(shader.vertexShader)
     console.log(shader.fragmentShader)
@@ -73,7 +117,11 @@ function _patchMaterial(mat, hooks: string[]) {
         uniform float uNear;
         uniform float uMaxInstances;
         uniform sampler2D uTiles;
+        uniform sampler2D uTIlesAnim;
         uniform float uTileSize;
+        uniform float uTime;
+        uniform vec2 uResolution;
+        uniform float uPixelRatio;
         
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -91,9 +139,13 @@ function _patchMaterial(mat, hooks: string[]) {
     shader.fragmentShader = shader.fragmentShader.replace(hooks[5], `
         vec2 tileUV = vec2(vInstanceData.x * uTileSize + (vUv.x * uTileSize), vInstanceData.y * uTileSize + (vUv.y * uTileSize));
         vec4 tileColor = texture2D(uTiles, tileUV);
+        vec4 tileColorAnim = texture2D(uTIlesAnim, tileUV);
 
-        // Use linear depth to fade objects in the distance
-        diffuseColor.rgb *= tileColor.xyz;
+        float animProgress = clamp((sin(uTime * 32.) + 1.) / 2., 0., 1.);
+        diffuseColor.rgb *= mix(tileColor.rgb, tileColorAnim.rgb, animProgress);
+        if ((fract(gl_FragCoord.y / 2.) + fract(gl_FragCoord.x / 2.)) / 2. >tileColor.a){
+          discard;
+        }
       `)
 
     shader.fragmentShader = shader.fragmentShader.replace(hooks[6], `
@@ -101,6 +153,16 @@ function _patchMaterial(mat, hooks: string[]) {
         reflectedLight.directDiffuse *= pow(vInstanceData.z, 2.);
         reflectedLight.indirectDiffuse *= pow(vInstanceData.z, 2.);
       `)
+
+    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', `
+      #include <emissivemap_fragment>
+      totalEmissiveRadiance.rgb = mix(
+          vec3(0.), 
+          diffuseColor.rgb, 
+          clamp(vInstanceData.z - 1., 0., 1.)
+      );
+
+    `)
 
     // shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
     //     #include <transmission_fragment>
@@ -194,4 +256,8 @@ export class VoxelBlockPhongMaterial extends MeshLambertMaterial {
 export function getBlockBaseMaterial(): Material {
   // Return either VoxelBlockLamberMaterial or VoxelBlockStandardMaterial based on the feature level
   return featureLevel === FeatureLevel.Low ? new VoxelBlockLamberMaterial() : new VoxelBlockStandardMaterial()
+}
+
+export function updateGlobalUniforms(frameDelta: number) {
+  _shaderTime = _shaderTime + (frameDelta / 1000)
 }

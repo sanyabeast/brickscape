@@ -1,13 +1,8 @@
-import { DirectionalLight, Group, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace, HemisphereLight, Fog, FogExp2, Color, Light, Scene, AmbientLight, Object3D } from "three";
+import { DirectionalLight, Group, EquirectangularReflectionMapping, SRGBColorSpace, FogExp2, Color, Light, AmbientLight, Object3D } from "three";
 import { Lensflare, LensflareElement } from "three/examples/jsm/objects/LensFlare"
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { rgbeLoader, textureLoader } from "./loaders";
 import { featureLevel, state } from "./state";
 import { clamp, lerp } from "./utils";
-import { throttle } from "lodash";
-
-const _envUpdateRateLimit = 15
-
 
 interface IFlareData {
     texture: string
@@ -17,7 +12,7 @@ interface IFlareData {
 }
 
 
-const flaresTable = [
+const flaresTable: IFlareData[] = [
     {
         texture: 'assets/flares/lensflare0.png',
         size: 700,
@@ -54,10 +49,10 @@ export class Environment extends Group {
     sun: DirectionalLight = null
     ambient: AmbientLight = null
     fog: FogExp2 = null
-    daytime: number = 0.9
+    daytime: number = 0.8
     dayspeed: number = 1 / 2048
-    sunRotationRadius: number = state.drawChunks * state.chunkSize
-    sunElevation: number = 1
+    sunRotationRadius: number = (state.drawChunks * state.chunkSize) * 4
+    sunElevation: number = 2
     minSunIntensity: number = -0.5
     maxSunIntensity: number = 0.5
 
@@ -98,7 +93,6 @@ export class Environment extends Group {
             scene.backgroundBlurriness = 1
         });
 
-        this.update = throttle(this.update.bind(this), 1000 / _envUpdateRateLimit)
         this.update(0)
     }
 

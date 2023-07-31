@@ -25,12 +25,14 @@ export enum BlockType {
     Dirt,
     Sand,
     Bedrock,
-    Water
+    Water,
+    Pumpkin
 }
 
 export interface IBlockTable {
     [x: string]: {
         tile: number[],
+        light?: boolean
     }
 }
 
@@ -55,6 +57,10 @@ export const blockTable: IBlockTable = {
     },
     [BlockType.Water]: {
         tile: [15, 13]
+    },
+    [BlockType.Pumpkin]: {
+        tile: [8, 7],
+        light: true
     }
 }
 
@@ -91,6 +97,10 @@ export class Block {
 
     get tileY(): number {
         return blockTable[this.btype].tile[1]
+    }
+
+    get isLightSource(): boolean {
+        return blockTable[this.btype].light === true
     }
 
     constructor({ x, y, z, chunk, lightness, blockType }) {

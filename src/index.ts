@@ -8,6 +8,7 @@ import { GenerationHelper, generationHelper } from './generator';
 import { tasker } from './tasker';
 import { worldManager } from './world';
 import { blockManager } from './blocks';
+import { updateGlobalUniforms } from './shaders';
 
 
 async function main() {
@@ -24,11 +25,11 @@ async function main() {
     let aspect = 2;  // the canvas default
 
     const canvas = state.canvas = document.querySelector('#c');
-    const renderer = state.renderer = new WebGLRenderer({ canvas });
+    const renderer = state.renderer = new WebGLRenderer({ canvas, antialias: featureLevel != FeatureLevel.Low });
     renderer.setPixelRatio(featureLevel == FeatureLevel.Low ? 1 : pixelRatio);
 
     const camera = state.camera = new PerspectiveCamera(fov, aspect, near, far);
-   
+
     const scene = state.scene = new Scene();
     const environment = new Environment({
         scene,
@@ -41,7 +42,7 @@ async function main() {
 
     // CONTROLS
     let controls = state.controls = new VoxelMapControls(camera, renderer.domElement)
-    
+
 
     // MAP
     const map = state.map = new MapManager({
@@ -56,7 +57,10 @@ async function main() {
         let now = +new Date()
         let frameTimeDelta = now - prevFrameTime
         let frameDelta = frameTimeDelta / (1000 / 60)
+       
         requestAnimationFrame(render);
+
+        updateGlobalUniforms(frameDelta)
         environment.update(frameDelta)
         map.update()
         controls.update()

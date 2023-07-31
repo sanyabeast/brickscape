@@ -42,6 +42,8 @@ export interface IBlockCreationRule {
     source: EBlockCreationSource
     params: IBlockCreationSourceParams
     replace: EBlockReplacingStrategy
+    replaceInclude?: BlockType[]
+    replaceExclude?: BlockType[]
     levels: IBlockCreationLevels[]
 }
 
@@ -175,4 +177,21 @@ export const rules: IBlocksGenerationRule[] = [
             }
         ]
     },
+
+    {
+        structure: getSingleBlockStructure(BlockType.Pumpkin),
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Stack,
+                replaceInclude: [BlockType.Dirt],
+                levels: [{
+                    min: 10,
+                    max: 11
+                }],
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.88, multiplier: 0.6 }
+            },
+        ]
+    },
+
 ]
