@@ -17412,6 +17412,7 @@ class Block {
             }
             default: {
                 let g = new three__WEBPACK_IMPORTED_MODULE_1__.BoxGeometry(1, 1, 1);
+                console.log(g);
                 g.translate(0, 0.5, 0);
                 return g;
             }
@@ -17676,7 +17677,6 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
      */
     _updateGeometry(updateAttrs = false) {
         if (updateAttrs) {
-            (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk._updateGeometry', `updating attributes at [${this.cx}, ${this.cz}]`);
             let _blocksInChunk = 0;
             _blocks__WEBPACK_IMPORTED_MODULE_3__.blockManager.traverseChunk(this.cx, this.cz, (x, y, z, block) => {
                 let instanceIndex = this._computedInstanceIndex(x, y, z);
@@ -17691,7 +17691,6 @@ class Chunk extends three__WEBPACK_IMPORTED_MODULE_7__.Group {
             });
             this._instanceVisibilityAttribute.needsUpdate = true;
             this._instanceDataAttribute.needsUpdate = true;
-            (0,_utils__WEBPACK_IMPORTED_MODULE_0__.logd)('Chunk._updateGeometry', `blocks in chunk [${this.cx}, ${this.cz}] - ${_blocksInChunk}`);
         }
         this._instancedMesh.instanceMatrix.needsUpdate = true;
         this.updateMatrix();
@@ -17943,9 +17942,9 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
         this.sunElevation = 2;
         this.minSunIntensity = -0.5;
         this.maxSunIntensity = 0.5;
-        this.minAmbIntensity = 0.01;
+        this.minAmbIntensity = 0.05;
         this.maxAmbIntensity = 0.5;
-        this.fog = new three__WEBPACK_IMPORTED_MODULE_3__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_3__.Color(0x777777), 0.005);
+        this.fog = new three__WEBPACK_IMPORTED_MODULE_3__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_3__.Color(0x777777), 0.33);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             scene.fog = this.fog;
         }
@@ -18116,6 +18115,22 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var tweakpane__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(tweakpane__WEBPACK_IMPORTED_MODULE_1__);
 
 
+const appInfo = `
+## DESCRIPTION
+Voxel World Procedural Generation: 
+A Three.js demo with 
+custom shaders 
+and instanced geometry. 
+Explore dynamically 
+generated landscapes 
+and structures using 
+different rules 
+and seeded noises. 
+Open-source on GitHub
+
+## Author
+@sanyabeast
+`;
 const monitoringData = {
     activeChunk: '',
     totalTasks: '',
@@ -18123,13 +18138,29 @@ const monitoringData = {
 };
 function createGui({ scene, camera, renderer }) {
     const controlPane = new tweakpane__WEBPACK_IMPORTED_MODULE_1__.Pane();
+    const controlsFolder = controlPane.addFolder({
+        title: 'Controls',
+        expanded: false
+    });
+    const monitorFolder = controlPane.addFolder({
+        title: 'Monitoring',
+        expanded: false
+    });
+    const infoFolder = controlPane.addFolder({
+        title: 'Info',
+        expanded: false
+    });
+    infoFolder.addMonitor({ description: appInfo }, 'description', {
+        multiline: true,
+        lineCount: 16,
+    });
     const updateProjectionMatrix = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.debounce)(() => camera.updateProjectionMatrix(), 100);
-    controlPane.addInput(camera, 'fov', {
+    controlsFolder.addInput(camera, 'fov', {
         min: 30,
         max: 179,
     }).on('change', e => updateProjectionMatrix());
     for (let k in monitoringData) {
-        controlPane.addMonitor(monitoringData, k);
+        monitorFolder.addMonitor(monitoringData, k);
     }
 }
 
@@ -18580,6 +18611,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   VoxelBlockLamberMaterial: () => (/* binding */ VoxelBlockLamberMaterial),
 /* harmony export */   VoxelBlockPhongMaterial: () => (/* binding */ VoxelBlockPhongMaterial),
 /* harmony export */   VoxelBlockStandardMaterial: () => (/* binding */ VoxelBlockStandardMaterial),
+/* harmony export */   VoxelBlockToonMaterial: () => (/* binding */ VoxelBlockToonMaterial),
+/* harmony export */   _perlinNoiseTexture: () => (/* binding */ _perlinNoiseTexture),
 /* harmony export */   getBlockBaseMaterial: () => (/* binding */ getBlockBaseMaterial),
 /* harmony export */   updateGlobalUniforms: () => (/* binding */ updateGlobalUniforms)
 /* harmony export */ });
@@ -18599,6 +18632,9 @@ _tilemapB.minFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
 _tilemap.minFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
 _tilemapB.magFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
 _tilemap.magFilter = three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter;
+const _perlinNoiseTexture = _textureLoader.load('assets/noise/perlin.32_1.png');
+_perlinNoiseTexture.wrapS = three__WEBPACK_IMPORTED_MODULE_2__.RepeatWrapping;
+_perlinNoiseTexture.wrapT = three__WEBPACK_IMPORTED_MODULE_2__.RepeatWrapping;
 /**
  * Patch the material with custom shaders and uniforms.
  * @param {ShaderMaterial} mat - The material to be patched.
@@ -18615,7 +18651,10 @@ function _patchMaterial(mat, hooks) {
         uTIlesAnim: { value: _tilemapB },
         uTileSize: { value: 1 / 16 },
         uTime: { value: 0 },
-        uResolution: { value: new three__WEBPACK_IMPORTED_MODULE_2__.Vector2() }
+        uResolution: { value: new three__WEBPACK_IMPORTED_MODULE_2__.Vector2() },
+        uFogHeight: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight * 0.666 },
+        uWindSpeed: { value: 0.25 },
+        uFogDisturbanceScale: { value: 150 }
     };
     // Assign the vertex shader and fragment shader through onBeforeCompile
     mat.onBeforeCompile = (shader) => {
@@ -18627,6 +18666,12 @@ function _patchMaterial(mat, hooks) {
         shader.uniforms.uTiles = mat.uniforms.uTiles;
         shader.uniforms.uTIlesAnim = mat.uniforms.uTIlesAnim;
         shader.uniforms.uTileSize = mat.uniforms.uTileSize;
+        shader.uniforms.uFogHeight = mat.uniforms.uFogHeight;
+        shader.uniforms.uWindSpeed = mat.uniforms.uWindSpeed;
+        shader.uniforms.uFogDisturbanceScale = mat.uniforms.uFogDisturbanceScale;
+        shader.uniforms.uPerlin = {
+            value: _perlinNoiseTexture
+        };
         shader.uniforms.uTime = {
             get value() {
                 return _shaderTime;
@@ -18680,6 +18725,7 @@ function _patchMaterial(mat, hooks) {
         vPosition = position.xyz;
         vInstanceData = instanceData;
         vInstanceVisibility = instanceVisibility;
+        vWorldPosition = worldPosition.xyz;
       `);
         // Replace hooks in the fragment shader with custom code
         shader.fragmentShader = shader.fragmentShader.replace(hooks[3], `
@@ -18694,6 +18740,10 @@ function _patchMaterial(mat, hooks) {
         uniform float uTime;
         uniform vec2 uResolution;
         uniform float uPixelRatio;
+        uniform sampler2D uPerlin;
+        uniform float uFogHeight;
+        uniform float uWindSpeed;
+        uniform float uFogDisturbanceScale;
         
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -18731,6 +18781,24 @@ function _patchMaterial(mat, hooks) {
           clamp(vInstanceData.z - 1., 0., 1.)
       );
 
+    `);
+        shader.fragmentShader = shader.fragmentShader.replace('#include <fog_fragment>', `
+      #ifdef USE_FOG
+        #ifdef FOG_EXP2
+          float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
+        #else
+          float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
+        #endif
+
+        vec4 fogDisturbance0 = texture2D(uPerlin, ((1.-vWorldPosition.xy) / uFogDisturbanceScale) + (uTime * uWindSpeed));
+        vec4 fogDisturbance1 = texture2D(uPerlin, ((1.-vWorldPosition.zy) / uFogDisturbanceScale) + (uTime * uWindSpeed));
+        float fogDisturbance = mix(fogDisturbance0.r, fogDisturbance1.r, 0.5);
+
+        fogFactor *= mix(0.3, 1., fogDisturbance);
+        fogFactor *= mix(0.1, 1., 1.-clamp(vWorldPosition.y / uFogHeight, 0., 1.));
+
+        gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+      #endif
     `);
         // shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
         //     #include <transmission_fragment>
@@ -18802,6 +18870,23 @@ class VoxelBlockPhongMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshLam
             '#include <uv_vertex>',
             '#include <fog_vertex>',
             '#define LAMBERT',
+            '#include <clipping_planes_fragment>',
+            '#include <color_fragment>',
+            '#include <aomap_fragment>',
+            '#include <transmission_fragment>'
+        ]);
+    }
+}
+class VoxelBlockToonMaterial extends three__WEBPACK_IMPORTED_MODULE_2__.MeshToonMaterial {
+    constructor() {
+        super({});
+        this.uniforms = null;
+        // Patch the material with custom shaders and uniforms
+        _patchMaterial(this, [
+            '#define TOON',
+            '#include <uv_vertex>',
+            '#include <fog_vertex>',
+            '#define TOON',
             '#include <clipping_planes_fragment>',
             '#include <color_fragment>',
             '#include <aomap_fragment>',

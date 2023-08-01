@@ -1,4 +1,4 @@
-import { Vector3, TextureLoader, MeshStandardMaterial, MeshLambertMaterial, Material, ShaderMaterial, Vector2, NearestFilter, LinearFilter, NearestMipMapLinearFilter } from "three";
+import { Vector3, TextureLoader, MeshStandardMaterial, MeshLambertMaterial, Material, ShaderMaterial, Vector2, NearestFilter, LinearFilter, NearestMipMapLinearFilter, MeshToonMaterial, RepeatWrapping } from "three";
 import { FeatureLevel, featureLevel, state } from "./state";
 import { blockManager } from "./blocks";
 
@@ -17,6 +17,11 @@ _tilemap.minFilter = NearestFilter
 _tilemapB.magFilter = NearestFilter
 _tilemap.magFilter = NearestFilter
 
+
+export const _perlinNoiseTexture = _textureLoader.load('assets/noise/perlin.32_1.png')
+_perlinNoiseTexture.wrapS = RepeatWrapping
+_perlinNoiseTexture.wrapT = RepeatWrapping
+
 /**
  * Patch the material with custom shaders and uniforms.
  * @param {ShaderMaterial} mat - The material to be patched.
@@ -34,7 +39,10 @@ function _patchMaterial(mat, hooks: string[]) {
     uTIlesAnim: { value: _tilemapB },
     uTileSize: { value: 1 / 16 },
     uTime: { value: 0 },
-    uResolution: { value: new Vector2() }
+    uResolution: { value: new Vector2() },
+    uFogHeight: { value: state.worldHeight * 0.666 },
+    uWindSpeed: { value: 0.25 },
+    uFogDisturbanceScale: { value: 150 }
 
   }
 
@@ -48,6 +56,13 @@ function _patchMaterial(mat, hooks: string[]) {
     shader.uniforms.uTiles = mat.uniforms.uTiles;
     shader.uniforms.uTIlesAnim = mat.uniforms.uTIlesAnim;
     shader.uniforms.uTileSize = mat.uniforms.uTileSize;
+    shader.uniforms.uFogHeight = mat.uniforms.uFogHeight;
+    shader.uniforms.uWindSpeed = mat.uniforms.uWindSpeed;
+    shader.uniforms.uFogDisturbanceScale = mat.uniforms.uFogDisturbanceScale;
+
+    shader.uniforms.uPerlin = {
+      value: _perlinNoiseTexture
+    };
     shader.uniforms.uTime = {
       get value() {
         return _shaderTime
@@ -107,6 +122,7 @@ function _patchMaterial(mat, hooks: string[]) {
         vPosition = position.xyz;
         vInstanceData = instanceData;
         vInstanceVisibility = instanceVisibility;
+        vWorldPosition = worldPosition.xyz;
       `)
 
     // Replace hooks in the fragment shader with custom code
@@ -122,6 +138,10 @@ function _patchMaterial(mat, hooks: string[]) {
         uniform float uTime;
         uniform vec2 uResolution;
         uniform float uPixelRatio;
+        uniform sampler2D uPerlin;
+        uniform float uFogHeight;
+        uniform float uWindSpeed;
+        uniform float uFogDisturbanceScale;
         
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -163,6 +183,25 @@ function _patchMaterial(mat, hooks: string[]) {
           clamp(vInstanceData.z - 1., 0., 1.)
       );
 
+    `)
+
+    shader.fragmentShader = shader.fragmentShader.replace('#include <fog_fragment>', `
+      #ifdef USE_FOG
+        #ifdef FOG_EXP2
+          float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
+        #else
+          float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
+        #endif
+
+        vec4 fogDisturbance0 = texture2D(uPerlin, ((1.-vWorldPosition.xy) / uFogDisturbanceScale) + (uTime * uWindSpeed));
+        vec4 fogDisturbance1 = texture2D(uPerlin, ((1.-vWorldPosition.zy) / uFogDisturbanceScale) + (uTime * uWindSpeed));
+        float fogDisturbance = mix(fogDisturbance0.r, fogDisturbance1.r, 0.5);
+
+        fogFactor *= mix(0.3, 1., fogDisturbance);
+        fogFactor *= mix(0.1, 1., 1.-clamp(vWorldPosition.y / uFogHeight, 0., 1.));
+
+        gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+      #endif
     `)
 
     // shader.fragmentShader = shader.fragmentShader.replace(hooks[7], `
@@ -242,6 +281,27 @@ export class VoxelBlockPhongMaterial extends MeshLambertMaterial {
       '#include <uv_vertex>',
       '#include <fog_vertex>',
       '#define LAMBERT',
+      '#include <clipping_planes_fragment>',
+      '#include <color_fragment>',
+      '#include <aomap_fragment>',
+      '#include <transmission_fragment>'
+    ])
+  }
+}
+
+export class VoxelBlockToonMaterial extends MeshToonMaterial {
+  uniforms = null
+  constructor() {
+    super({
+
+    });
+
+    // Patch the material with custom shaders and uniforms
+    _patchMaterial(this, [
+      '#define TOON',
+      '#include <uv_vertex>',
+      '#include <fog_vertex>',
+      '#define TOON',
       '#include <clipping_planes_fragment>',
       '#include <color_fragment>',
       '#include <aomap_fragment>',

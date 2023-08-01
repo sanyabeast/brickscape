@@ -87,7 +87,6 @@ export class Chunk extends Group {
      */
     _updateGeometry(updateAttrs: boolean = false) {
         if (updateAttrs) {
-            logd('Chunk._updateGeometry', `updating attributes at [${this.cx}, ${this.cz}]`)
             let _blocksInChunk = 0
             blockManager.traverseChunk(this.cx, this.cz, (x, y, z, block) => {
                 let instanceIndex = this._computedInstanceIndex(x, y, z);
@@ -103,7 +102,6 @@ export class Chunk extends Group {
             this._instanceVisibilityAttribute.needsUpdate = true
             this._instanceDataAttribute.needsUpdate = true
 
-            logd('Chunk._updateGeometry', `blocks in chunk [${this.cx}, ${this.cz}] - ${_blocksInChunk}`)
         }
 
         this._instancedMesh.instanceMatrix.needsUpdate = true

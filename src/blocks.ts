@@ -86,6 +86,7 @@ export class Block {
             }
             default: {
                 let g = new BoxGeometry(1, 1, 1) as any as InstancedBufferGeometry
+                console.log(g)
                 g.translate(0, 0.5, 0)
                 return g
             }

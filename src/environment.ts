@@ -56,13 +56,13 @@ export class Environment extends Group {
     minSunIntensity: number = -0.5
     maxSunIntensity: number = 0.5
 
-    minAmbIntensity: number = 0.01
+    minAmbIntensity: number = 0.05
     maxAmbIntensity: number = 0.5
 
     constructor({ scene, camera, renderer }) {
         super()
 
-        this.fog = new FogExp2(new Color(0x777777), 0.005)
+        this.fog = new FogExp2(new Color(0x777777), 0.33)
 
         if (featureLevel > 0) {
             scene.fog = this.fog
