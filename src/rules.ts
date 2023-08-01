@@ -1,11 +1,11 @@
 import { BlockType } from "./blocks"
 import { state } from "./state"
+import { structures } from "./structures"
 
 export enum EBlockReplacingStrategy {
     DontReplace,
     Replace,
-    OnlyReplace,
-    Stack
+    OnlyReplace
 }
 
 export interface IBlockPlacement {
@@ -42,6 +42,7 @@ export interface IBlockCreationRule {
     source: EBlockCreationSource
     params: IBlockCreationSourceParams
     replace: EBlockReplacingStrategy
+    stack?: boolean
     replaceInclude?: BlockType[]
     replaceExclude?: BlockType[]
     levels: IBlockCreationLevels[]
@@ -50,7 +51,7 @@ export interface IBlockCreationRule {
 function getSingleBlockStructure(blockType: BlockType): IBlockPlacement[] {
     return [{
         blockType,
-        offset: [0, 0]
+        offset: [0, 0, 0]
     }]
 }
 
@@ -76,7 +77,7 @@ export const rules: IBlocksGenerationRule[] = [
     //     create: [
     //         {
     //             source: EBlockCreationSource.Simplex,
-    //             replace: EBlockReplacingStrategy.Stack,
+    //             replace: EBlockReplacingStrategy.Replace,
     //             levels: [{
     //                 min: 0,
     //                 max: 8
@@ -91,11 +92,12 @@ export const rules: IBlocksGenerationRule[] = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                     min: 0,
                     max: 8
                 }],
+                stack: true,
                 params: { scale: 0.02, iterations: 0, scaleStep: 1.11, seed: 10, addent: -0.3 }
             },
         ]
@@ -107,11 +109,12 @@ export const rules: IBlocksGenerationRule[] = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                     min: 0,
                     max: 8
                 }],
+                stack: true,
                 params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 115, addent: -0.4, multiplier: 1.5 }
             },
         ]
@@ -138,6 +141,7 @@ export const rules: IBlocksGenerationRule[] = [
             {
                 source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.OnlyReplace,
+                replaceExclude: [BlockType.Wood, BlockType.Leaves],
                 levels: [{
                     min: 6,
                     max: state.worldHeight
@@ -152,11 +156,12 @@ export const rules: IBlocksGenerationRule[] = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                     min: 10,
                     max: state.worldHeight
                 }],
+                stack: true,
                 params: { scale: 0.1, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.9, multiplier: 2 }
             },
         ]
@@ -183,13 +188,48 @@ export const rules: IBlocksGenerationRule[] = [
         create: [
             {
                 source: EBlockCreationSource.Simplex,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [BlockType.Rock],
+                levels: [{
+                    min: 10,
+                    max: 11
+                }],
+                stack: true,
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.7, multiplier: 0.5 }
+            },
+        ]
+    },
+    
+    {
+        structure: structures['tree.01'],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
                 replaceInclude: [BlockType.Dirt],
                 levels: [{
                     min: 10,
                     max: 11
                 }],
-                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.88, multiplier: 0.6 }
+                stack: true,
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 111, addent: -0.88, multiplier: 0.6 }
+            },
+        ]
+    },
+
+    {
+        structure: structures['tree.02'],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [BlockType.Dirt],
+                levels: [{
+                    min: 10,
+                    max: 11
+                }],
+                stack: true,
+                params: { scale: 0.3, iterations: 0, scaleStep: 1.11, seed: 54, addent: -0.88, multiplier: 0.6 }
             },
         ]
     },

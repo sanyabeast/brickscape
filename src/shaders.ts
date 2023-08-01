@@ -143,7 +143,8 @@ function _patchMaterial(mat, hooks: string[]) {
 
         float animProgress = clamp((sin(uTime * 32.) + 1.) / 2., 0., 1.);
         diffuseColor.rgb *= mix(tileColor.rgb, tileColorAnim.rgb, animProgress);
-        if ((fract(gl_FragCoord.y / 2.) + fract(gl_FragCoord.x / 2.)) / 2. >tileColor.a){
+
+        if ((fract(gl_FragCoord.y / 2.) + fract(gl_FragCoord.x / 2.)) / 2. > tileColor.a){
           discard;
         }
       `)

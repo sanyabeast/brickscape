@@ -26,15 +26,21 @@ export enum BlockType {
     Sand,
     Bedrock,
     Water,
-    Pumpkin
+    Pumpkin,
+    Wood,
+    Leaves
+}
+
+
+export interface IBlockDescriptor {
+    tile: number[]
+    light?: boolean
 }
 
 export interface IBlockTable {
-    [x: string]: {
-        tile: number[],
-        light?: boolean
-    }
+    [x: string]: IBlockDescriptor
 }
+
 
 export const blockTable: IBlockTable = {
     [BlockType.None]: {
@@ -61,6 +67,12 @@ export const blockTable: IBlockTable = {
     [BlockType.Pumpkin]: {
         tile: [8, 7],
         light: true
+    },
+    [BlockType.Wood]: {
+        tile: [4, 1]
+    },
+    [BlockType.Leaves]: {
+        tile: [0, 3]
     }
 }
 

@@ -39,7 +39,7 @@ interface IAppState {
 export const state: IAppState = {
     maxChunksInMemory: 512,
     seed: 12,
-    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
+    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
     blockShape: BlockShape.Cube,
     worldHeight: 16,
