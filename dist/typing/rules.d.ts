@@ -9,6 +9,7 @@ export interface IBlockPlacement {
     offset: number[];
 }
 export interface IBlocksGenerationRule {
+    name?: string;
     structure: IBlockPlacement[];
     create: IBlockCreationRule[];
 }

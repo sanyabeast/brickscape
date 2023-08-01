@@ -20,11 +20,11 @@ export enum BlockShape {
 
 export enum BlockType {
     None,
+    Bedrock,
     Gravel,
     Rock,
     Dirt,
     Sand,
-    Bedrock,
     Water,
     Pumpkin,
     Wood,
@@ -120,7 +120,6 @@ export class Block {
         // if (_blockManager.getBlockAt(x, y, z)) {
         //     // return BlocksManager.getBlockAt(x, y, z)
         // }
-
         this.bx = x;
         this.by = y;
         this.bz = z;
@@ -178,11 +177,22 @@ export class BlockManager {
     }
 
     setBlock(block: Block): void {
-        this.blocks[block.bid] = block
+        if (block.by < state.worldHeight && block.by >= 0) {
+            this.blocks[block.bid] = block
+        }
+
     }
     removeBlock(block: Block) {
         delete this.blocks[block.bid]
     }
+    removeBlockAt(x: number, y: number, z: number): boolean {
+        let block = this.getBlockAt(x, y, z)
+        if (block) {
+            this.removeBlock(block)
+        }
+        return !!block
+    }
+
     getBlockAt(x: number, y: number, z: number): Block {
         return this.blocks[this.getBlockId(x, y, z)]
     }
@@ -202,7 +212,7 @@ export class BlockManager {
         return r
     }
     getElevationAt(x: number, z: number): number {
-        let r: number = 0
+        let r: number = -1
 
         for (let i = 0; i < state.worldHeight; i++) {
             let b = this.getBlockAt(x, i, z)

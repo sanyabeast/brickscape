@@ -17359,11 +17359,11 @@ var BlockShape;
 var BlockType;
 (function (BlockType) {
     BlockType[BlockType["None"] = 0] = "None";
-    BlockType[BlockType["Gravel"] = 1] = "Gravel";
-    BlockType[BlockType["Rock"] = 2] = "Rock";
-    BlockType[BlockType["Dirt"] = 3] = "Dirt";
-    BlockType[BlockType["Sand"] = 4] = "Sand";
-    BlockType[BlockType["Bedrock"] = 5] = "Bedrock";
+    BlockType[BlockType["Bedrock"] = 1] = "Bedrock";
+    BlockType[BlockType["Gravel"] = 2] = "Gravel";
+    BlockType[BlockType["Rock"] = 3] = "Rock";
+    BlockType[BlockType["Dirt"] = 4] = "Dirt";
+    BlockType[BlockType["Sand"] = 5] = "Sand";
     BlockType[BlockType["Water"] = 6] = "Water";
     BlockType[BlockType["Pumpkin"] = 7] = "Pumpkin";
     BlockType[BlockType["Wood"] = 8] = "Wood";
@@ -17427,9 +17427,6 @@ class Block {
         return blockTable[this.btype].light === true;
     }
     constructor({ x, y, z, chunk, lightness, blockType }) {
-        // if (_blockManager.getBlockAt(x, y, z)) {
-        //     // return BlocksManager.getBlockAt(x, y, z)
-        // }
         this.bx = null;
         this.by = null;
         this.bz = null;
@@ -17439,6 +17436,9 @@ class Block {
         this.lightness = 1;
         this.serial = null;
         this.needsUpdate = true;
+        // if (_blockManager.getBlockAt(x, y, z)) {
+        //     // return BlocksManager.getBlockAt(x, y, z)
+        // }
         this.bx = x;
         this.by = y;
         this.bz = z;
@@ -17482,10 +17482,19 @@ class BlockManager {
         _blockManager = this;
     }
     setBlock(block) {
-        this.blocks[block.bid] = block;
+        if (block.by < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight && block.by >= 0) {
+            this.blocks[block.bid] = block;
+        }
     }
     removeBlock(block) {
         delete this.blocks[block.bid];
+    }
+    removeBlockAt(x, y, z) {
+        let block = this.getBlockAt(x, y, z);
+        if (block) {
+            this.removeBlock(block);
+        }
+        return !!block;
     }
     getBlockAt(x, y, z) {
         return this.blocks[this.getBlockId(x, y, z)];
@@ -17504,7 +17513,7 @@ class BlockManager {
         return r;
     }
     getElevationAt(x, z) {
-        let r = 0;
+        let r = -1;
         for (let i = 0; i < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight; i++) {
             let b = this.getBlockAt(x, i, z);
             if (b) {
@@ -18334,9 +18343,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   rules: () => (/* binding */ rules)
 /* harmony export */ });
 /* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
-/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
-/* harmony import */ var _structures__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./structures */ "./src/structures.ts");
-
+/* harmony import */ var _structures__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./structures */ "./src/structures.ts");
 
 
 var EBlockReplacingStrategy;
@@ -18373,20 +18380,21 @@ const rules = [
             }
         ]
     },
-    // {
-    //     structure: getSingleBlockStructure(BlockType.Rock),
-    //     create: [
-    //         {
-    //             source: EBlockCreationSource.Simplex,
-    //             replace: EBlockReplacingStrategy.Replace,
-    //             levels: [{
-    //                 min: 0,
-    //                 max: 8
-    //             }],
-    //             params: { scale: 0.1, iterations: 0, scaleStep: 2, time: 1.21331 }
-    //         },
-    //     ]
-    // },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.Replace,
+                levels: [{
+                        min: 1,
+                        max: 8
+                    }],
+                stack: true,
+                params: { scale: 0.04, iterations: 2, scaleStep: 1.11, seed: 10, addent: -0.3 }
+            },
+        ]
+    },
     {
         structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel),
         create: [
@@ -18394,11 +18402,11 @@ const rules = [
                 source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.Replace,
                 levels: [{
-                        min: 0,
+                        min: 1,
                         max: 8
                     }],
                 stack: true,
-                params: { scale: 0.02, iterations: 0, scaleStep: 1.11, seed: 10, addent: -0.3 }
+                params: { scale: 0.04, iterations: 0, scaleStep: 1.11, seed: 123, addent: -0.8 }
             },
         ]
     },
@@ -18409,11 +18417,11 @@ const rules = [
                 source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.Replace,
                 levels: [{
-                        min: 0,
+                        min: 1,
                         max: 8
                     }],
                 stack: true,
-                params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 115, addent: -0.4, multiplier: 1.5 }
+                params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 115, addent: -0.4, multiplier: 1.2 }
             },
         ]
     },
@@ -18424,10 +18432,10 @@ const rules = [
                 source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.OnlyReplace,
                 levels: [{
-                        min: 0,
-                        max: 3
+                        min: 1,
+                        max: 4
                     }],
-                params: { scale: 0.01, iterations: 0, scaleStep: 1.11, seed: 115, addent: 0.5, multiplier: 2 }
+                params: { scale: 0.01, iterations: 0, scaleStep: 1.11, seed: 441, addent: 0.5, multiplier: 2 }
             },
         ]
     },
@@ -18436,28 +18444,60 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.OnlyReplace,
+                replace: EBlockReplacingStrategy.Replace,
                 replaceExclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Wood, _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Leaves],
                 levels: [{
                         min: 6,
-                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                        max: 24
                     }],
-                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 2234, addent: 0.5 }
+                stack: true,
+                params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 2234, addent: -0.6, multiplier: 1.2 }
             },
         ]
     },
     {
-        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock),
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceExclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Wood, _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Leaves],
+                levels: [{
+                        min: 6,
+                        max: 24
+                    }],
+                stack: true,
+                params: { scale: 0.005, iterations: 4, scaleStep: 1.11, seed: 132123, addent: -0.85, multiplier: 1.2 }
+            },
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Gravel),
         create: [
             {
                 source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.Replace,
                 levels: [{
-                        min: 10,
-                        max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
+                        min: 4,
+                        max: 8
                     }],
                 stack: true,
-                params: { scale: 0.1, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.9, multiplier: 2 }
+                params: { scale: 0.07, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.9, multiplier: 2 }
+            },
+        ]
+    },
+    {
+        structure: getSingleBlockStructure(_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Sand),
+        create: [
+            {
+                source: EBlockCreationSource.Perlin,
+                replace: EBlockReplacingStrategy.Replace,
+                levels: [{
+                        min: 4,
+                        max: 8
+                    }],
+                stack: true,
+                params: { scale: 0.01, iterations: 2, scaleStep: 1.11, seed: 545, addent: -0.95, multiplier: 1.5 }
             },
         ]
     },
@@ -18469,10 +18509,42 @@ const rules = [
                 replace: EBlockReplacingStrategy.DontReplace,
                 levels: [{
                         min: 1,
-                        max: 3
+                        max: 4
                     }],
                 params: {}
             }
+        ]
+    },
+    {
+        structure: _structures__WEBPACK_IMPORTED_MODULE_1__.structures['tree.01'],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.DontReplace,
+                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
+                levels: [{
+                        min: 16,
+                        max: 17
+                    }],
+                stack: true,
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 1233, addent: -0.88, multiplier: 0.5 }
+            },
+        ]
+    },
+    {
+        structure: _structures__WEBPACK_IMPORTED_MODULE_1__.structures['tree.02'],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
+                levels: [{
+                        min: 16,
+                        max: 24
+                    }],
+                stack: true,
+                params: { scale: 0.3, iterations: 0, scaleStep: 1.11, seed: 11313, addent: -0.88, multiplier: 0.5 }
+            },
         ]
     },
     {
@@ -18481,45 +18553,13 @@ const rules = [
             {
                 source: EBlockCreationSource.Simplex,
                 replace: EBlockReplacingStrategy.Replace,
-                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock],
-                levels: [{
-                        min: 10,
-                        max: 11
-                    }],
-                stack: true,
-                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.7, multiplier: 0.5 }
-            },
-        ]
-    },
-    {
-        structure: _structures__WEBPACK_IMPORTED_MODULE_2__.structures['tree.01'],
-        create: [
-            {
-                source: EBlockCreationSource.Simplex,
-                replace: EBlockReplacingStrategy.Replace,
                 replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
                 levels: [{
-                        min: 10,
-                        max: 11
+                        min: 50,
+                        max: 51
                     }],
                 stack: true,
-                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 111, addent: -0.88, multiplier: 0.6 }
-            },
-        ]
-    },
-    {
-        structure: _structures__WEBPACK_IMPORTED_MODULE_2__.structures['tree.02'],
-        create: [
-            {
-                source: EBlockCreationSource.Simplex,
-                replace: EBlockReplacingStrategy.Replace,
-                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
-                levels: [{
-                        min: 10,
-                        max: 11
-                    }],
-                stack: true,
-                params: { scale: 0.3, iterations: 0, scaleStep: 1.11, seed: 54, addent: -0.88, multiplier: 0.6 }
+                params: { scale: 0.4, iterations: 0, scaleStep: 1.11, seed: 441, addent: -0.95, multiplier: 4 }
             },
         ]
     },
@@ -18809,12 +18849,11 @@ var FeatureLevel;
 })(FeatureLevel || (FeatureLevel = {}));
 let featureLevel = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.isMobileDevice)() ? FeatureLevel.Low : FeatureLevel.Mid;
 const state = {
-    maxChunksInMemory: 512,
-    seed: 12,
+    seed: 454,
     chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
     blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Cube,
-    worldHeight: 16,
+    worldHeight: 24,
     camera: null,
     scene: null,
     renderer: null,
@@ -19302,12 +19341,23 @@ class WorldManager {
                         let stackOffset = creationRule.stack ? -(0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(level.min - _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z) - 1, 0, level.min) : 0;
                         for (let y = level.min + stackOffset; y < level.min + blocksCount + stackOffset; y++) {
                             let replaceAllowed = this._testReplaceRestrictions(x, y, z, creationRule);
+                            if (rule.name === 'clear') {
+                                console.log(replaceAllowed);
+                            }
                             if (replaceAllowed) {
                                 this._placeStructure(x, y, z, rule.structure, creationRule.replace);
                             }
                         }
                     });
                 });
+            }
+        });
+        this._cleanChunk(cx, cz);
+    }
+    _cleanChunk(cx, cz) {
+        _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
+            if (block && block.btype === _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.None) {
+                _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.removeBlock(block);
             }
         });
     }

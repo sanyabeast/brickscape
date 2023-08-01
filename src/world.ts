@@ -75,6 +75,12 @@ export class WorldManager {
 
                         for (let y = level.min + stackOffset; y < level.min + blocksCount + stackOffset; y++) {
                             let replaceAllowed: boolean = this._testReplaceRestrictions(x, y, z, creationRule)
+
+                            if (rule.name === 'clear'){
+                                console.log(replaceAllowed  )
+                            }
+
+
                             if (replaceAllowed) {
                                 this._placeStructure(x, y, z, rule.structure, creationRule.replace)
                             }
@@ -84,8 +90,17 @@ export class WorldManager {
                 })
             }
         })
+
+        this._cleanChunk(cx, cz)
     }
 
+    _cleanChunk(cx: number, cz: number) {
+        blockManager.traverseChunk(cx, cz, (x, y, z, block) => {
+            if (block && block.btype === BlockType.None) {
+                blockManager.removeBlock(block)
+            }
+        })
+    }
 
     _testReplaceRestrictions(x: number, y: number, z: number, creationRule: IBlockCreationRule): boolean {
         let elevation = blockManager.getElevationAt(x, z)
@@ -96,7 +111,7 @@ export class WorldManager {
             let block: Block = blockManager.getBlockAt(x, elevation, z)
 
             if (creationRule.replaceInclude) {
-                if (!block){
+                if (!block) {
                     return false
                 }
                 let included = false
@@ -110,9 +125,10 @@ export class WorldManager {
             }
 
             if (creationRule.replaceExclude) {
-                if (!block){
+                if (!block) {
                     return true
                 }
+
                 let excluded = false
                 for (let i = 0; i < creationRule.replaceExclude.length; i++) {
                     if (block.btype === creationRule.replaceExclude[i]) {
@@ -120,6 +136,7 @@ export class WorldManager {
                         break
                     }
                 }
+
                 return !excluded
             }
 

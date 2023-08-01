@@ -10,11 +10,11 @@ export declare enum BlockShape {
 }
 export declare enum BlockType {
     None = 0,
-    Gravel = 1,
-    Rock = 2,
-    Dirt = 3,
-    Sand = 4,
-    Bedrock = 5,
+    Bedrock = 1,
+    Gravel = 2,
+    Rock = 3,
+    Dirt = 4,
+    Sand = 5,
     Water = 6,
     Pumpkin = 7,
     Wood = 8,
@@ -65,6 +65,7 @@ export declare class BlockManager {
     constructor();
     setBlock(block: Block): void;
     removeBlock(block: Block): void;
+    removeBlockAt(x: number, y: number, z: number): boolean;
     getBlockAt(x: number, y: number, z: number): Block;
     getBlockId(...args: number[]): string;
     getMostElevatedBlockAt(x: number, z: number): Block;

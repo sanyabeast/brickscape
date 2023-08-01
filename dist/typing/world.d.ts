@@ -12,6 +12,7 @@ export declare class WorldManager {
     checkChunkGeneration(cx: number, cz: number): boolean;
     cancel(): void;
     _genrateChunkWithRules(cx: number, cz: number): void;
+    _cleanChunk(cx: number, cz: number): void;
     _testReplaceRestrictions(x: number, y: number, z: number, creationRule: IBlockCreationRule): boolean;
     _placeStructure(x: number, y: number, z: number, structure: IBlockPlacement[], replaceStrategy: EBlockReplacingStrategy): void;
     _placeBlock(x: any, y: any, z: any, blockType: BlockType, replaceStrategy: EBlockReplacingStrategy): void;

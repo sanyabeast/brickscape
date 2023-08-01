@@ -12,7 +12,6 @@ export declare enum FeatureLevel {
 }
 export declare let featureLevel: FeatureLevel;
 interface IAppState {
-    maxChunksInMemory: number;
     seed: number;
     chunkSize: number;
     drawChunks: number;
