@@ -1,18 +1,18 @@
 # brickscape
 
-See [hexworld](https://sanyabeast.github.io/brickscape/dist/).
+See [demo](https://sanyabeast.github.io/brickscape/dist/).
 
-## Project setup
+## project setup
 ```
 npm install
 ```
 
-### Compiles and hot-reloads for development
+### compiles and hot-reloads for development
 ```
 npm start
 ```
 
-### Compiles and minifies for production
+### compiles and minifies for production
 ```
 npm run build
 ```
