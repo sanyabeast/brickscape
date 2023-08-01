@@ -2,8 +2,7 @@ import { BlockType } from "./blocks";
 export declare enum EBlockReplacingStrategy {
     DontReplace = 0,
     Replace = 1,
-    OnlyReplace = 2,
-    Stack = 3
+    OnlyReplace = 2
 }
 export interface IBlockPlacement {
     blockType: BlockType;
@@ -34,6 +33,7 @@ export interface IBlockCreationRule {
     source: EBlockCreationSource;
     params: IBlockCreationSourceParams;
     replace: EBlockReplacingStrategy;
+    stack?: boolean;
     replaceInclude?: BlockType[];
     replaceExclude?: BlockType[];
     levels: IBlockCreationLevels[];

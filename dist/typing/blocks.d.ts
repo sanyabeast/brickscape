@@ -16,13 +16,16 @@ export declare enum BlockType {
     Sand = 4,
     Bedrock = 5,
     Water = 6,
-    Pumpkin = 7
+    Pumpkin = 7,
+    Wood = 8,
+    Leaves = 9
+}
+export interface IBlockDescriptor {
+    tile: number[];
+    light?: boolean;
 }
 export interface IBlockTable {
-    [x: string]: {
-        tile: number[];
-        light?: boolean;
-    };
+    [x: string]: IBlockDescriptor;
 }
 export declare const blockTable: IBlockTable;
 export declare class Block {

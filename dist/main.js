@@ -17366,6 +17366,8 @@ var BlockType;
     BlockType[BlockType["Bedrock"] = 5] = "Bedrock";
     BlockType[BlockType["Water"] = 6] = "Water";
     BlockType[BlockType["Pumpkin"] = 7] = "Pumpkin";
+    BlockType[BlockType["Wood"] = 8] = "Wood";
+    BlockType[BlockType["Leaves"] = 9] = "Leaves";
 })(BlockType || (BlockType = {}));
 const blockTable = {
     [BlockType.None]: {
@@ -17392,6 +17394,12 @@ const blockTable = {
     [BlockType.Pumpkin]: {
         tile: [8, 7],
         light: true
+    },
+    [BlockType.Wood]: {
+        tile: [4, 1]
+    },
+    [BlockType.Leaves]: {
+        tile: [0, 3]
     }
 };
 class Block {
@@ -18327,6 +18335,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
 /* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var _structures__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./structures */ "./src/structures.ts");
+
 
 
 var EBlockReplacingStrategy;
@@ -18334,7 +18344,6 @@ var EBlockReplacingStrategy;
     EBlockReplacingStrategy[EBlockReplacingStrategy["DontReplace"] = 0] = "DontReplace";
     EBlockReplacingStrategy[EBlockReplacingStrategy["Replace"] = 1] = "Replace";
     EBlockReplacingStrategy[EBlockReplacingStrategy["OnlyReplace"] = 2] = "OnlyReplace";
-    EBlockReplacingStrategy[EBlockReplacingStrategy["Stack"] = 3] = "Stack";
 })(EBlockReplacingStrategy || (EBlockReplacingStrategy = {}));
 var EBlockCreationSource;
 (function (EBlockCreationSource) {
@@ -18345,7 +18354,7 @@ var EBlockCreationSource;
 function getSingleBlockStructure(blockType) {
     return [{
             blockType,
-            offset: [0, 0]
+            offset: [0, 0, 0]
         }];
 }
 const rules = [
@@ -18369,7 +18378,7 @@ const rules = [
     //     create: [
     //         {
     //             source: EBlockCreationSource.Simplex,
-    //             replace: EBlockReplacingStrategy.Stack,
+    //             replace: EBlockReplacingStrategy.Replace,
     //             levels: [{
     //                 min: 0,
     //                 max: 8
@@ -18383,11 +18392,12 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                         min: 0,
                         max: 8
                     }],
+                stack: true,
                 params: { scale: 0.02, iterations: 0, scaleStep: 1.11, seed: 10, addent: -0.3 }
             },
         ]
@@ -18397,11 +18407,12 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                         min: 0,
                         max: 8
                     }],
+                stack: true,
                 params: { scale: 0.05, iterations: 0, scaleStep: 1.11, seed: 115, addent: -0.4, multiplier: 1.5 }
             },
         ]
@@ -18426,6 +18437,7 @@ const rules = [
             {
                 source: EBlockCreationSource.Perlin,
                 replace: EBlockReplacingStrategy.OnlyReplace,
+                replaceExclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Wood, _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Leaves],
                 levels: [{
                         min: 6,
                         max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
@@ -18439,11 +18451,12 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Perlin,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
                 levels: [{
                         min: 10,
                         max: _state__WEBPACK_IMPORTED_MODULE_1__.state.worldHeight
                     }],
+                stack: true,
                 params: { scale: 0.1, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.9, multiplier: 2 }
             },
         ]
@@ -18467,13 +18480,46 @@ const rules = [
         create: [
             {
                 source: EBlockCreationSource.Simplex,
-                replace: EBlockReplacingStrategy.Stack,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Rock],
+                levels: [{
+                        min: 10,
+                        max: 11
+                    }],
+                stack: true,
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.7, multiplier: 0.5 }
+            },
+        ]
+    },
+    {
+        structure: _structures__WEBPACK_IMPORTED_MODULE_2__.structures['tree.01'],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
                 replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
                 levels: [{
                         min: 10,
                         max: 11
                     }],
-                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 455, addent: -0.88, multiplier: 0.6 }
+                stack: true,
+                params: { scale: 0.5, iterations: 0, scaleStep: 1.11, seed: 111, addent: -0.88, multiplier: 0.6 }
+            },
+        ]
+    },
+    {
+        structure: _structures__WEBPACK_IMPORTED_MODULE_2__.structures['tree.02'],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [_blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Dirt],
+                levels: [{
+                        min: 10,
+                        max: 11
+                    }],
+                stack: true,
+                params: { scale: 0.3, iterations: 0, scaleStep: 1.11, seed: 54, addent: -0.88, multiplier: 0.6 }
             },
         ]
     },
@@ -18627,7 +18673,8 @@ function _patchMaterial(mat, hooks) {
 
         float animProgress = clamp((sin(uTime * 32.) + 1.) / 2., 0., 1.);
         diffuseColor.rgb *= mix(tileColor.rgb, tileColorAnim.rgb, animProgress);
-        if ((fract(gl_FragCoord.y / 2.) + fract(gl_FragCoord.x / 2.)) / 2. >tileColor.a){
+
+        if ((fract(gl_FragCoord.y / 2.) + fract(gl_FragCoord.x / 2.)) / 2. > tileColor.a){
           discard;
         }
       `);
@@ -18764,7 +18811,7 @@ let featureLevel = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.isMobileDevice)() ? Fe
 const state = {
     maxChunksInMemory: 512,
     seed: 12,
-    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 10,
+    chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
     blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Cube,
     worldHeight: 16,
@@ -18779,6 +18826,50 @@ const state = {
     world: null,
     blockManager: null
 };
+
+
+/***/ }),
+
+/***/ "./src/structures.ts":
+/*!***************************!*\
+  !*** ./src/structures.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   structures: () => (/* binding */ structures)
+/* harmony export */ });
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+
+const structures = {
+    "tree.01": createTreeStructure(4, 2, 3),
+    "tree.02": createTreeStructure(2, 1, 2),
+    "tree.03": createTreeStructure(3, 3, 2)
+};
+function createTreeStructure(height, crownWidth, crownHeight) {
+    let r = [];
+    for (let i = 0; i < height; i++) {
+        r.push({
+            offset: [0, i, 0],
+            blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Wood
+        });
+    }
+    for (let cx = -crownWidth; cx <= crownWidth; cx++) {
+        for (let cy = 0; cy <= crownHeight; cy++) {
+            for (let cz = -crownWidth; cz <= crownWidth; cz++) {
+                if ((cx + cy + cz) % 2 === 0) {
+                    r.push({
+                        offset: [cx, cy + height - 1, cz],
+                        blockType: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockType.Leaves
+                    });
+                }
+            }
+        }
+    }
+    return r;
+}
 
 
 /***/ }),
@@ -19208,7 +19299,8 @@ class WorldManager {
                         let blocksCount = blocksRatio * levelHeight;
                         blocksCount = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(blocksCount, 0, _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight);
                         blocksCount = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(blocksCount, 0, levelHeight);
-                        for (let y = level.min; y < level.min + blocksCount; y++) {
+                        let stackOffset = creationRule.stack ? -(0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(level.min - _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z) - 1, 0, level.min) : 0;
+                        for (let y = level.min + stackOffset; y < level.min + blocksCount + stackOffset; y++) {
                             let replaceAllowed = this._testReplaceRestrictions(x, y, z, creationRule);
                             if (replaceAllowed) {
                                 this._placeStructure(x, y, z, rule.structure, creationRule.replace);
@@ -19221,9 +19313,14 @@ class WorldManager {
     }
     _testReplaceRestrictions(x, y, z, creationRule) {
         let elevation = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z);
+        let stackOffset = creationRule.stack ? 1 : 0;
+        elevation = (0,_utils__WEBPACK_IMPORTED_MODULE_5__.clamp)(elevation - stackOffset, 0, _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight - 1);
         if (elevation > 0) {
             let block = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getBlockAt(x, elevation, z);
             if (creationRule.replaceInclude) {
+                if (!block) {
+                    return false;
+                }
                 let included = false;
                 for (let i = 0; i < creationRule.replaceInclude.length; i++) {
                     if (block.btype === creationRule.replaceInclude[i]) {
@@ -19234,6 +19331,9 @@ class WorldManager {
                 return included;
             }
             if (creationRule.replaceExclude) {
+                if (!block) {
+                    return true;
+                }
                 let excluded = false;
                 for (let i = 0; i < creationRule.replaceExclude.length; i++) {
                     if (block.btype === creationRule.replaceExclude[i]) {
@@ -19251,7 +19351,7 @@ class WorldManager {
     }
     _placeStructure(x, y, z, structure, replaceStrategy) {
         structure.forEach((placement, index) => {
-            this._placeBlock(x + placement.offset[0], y + placement.offset[1], z + placement.offset[1], placement.blockType, replaceStrategy);
+            this._placeBlock(x + placement.offset[0], y + placement.offset[1], z + placement.offset[2], placement.blockType, replaceStrategy);
         });
     }
     _placeBlock(x, y, z, blockType, replaceStrategy) {
@@ -19293,20 +19393,20 @@ class WorldManager {
                 }
                 break;
             }
-            case _rules__WEBPACK_IMPORTED_MODULE_2__.EBlockReplacingStrategy.Stack: {
-                let elevation = _blocks__WEBPACK_IMPORTED_MODULE_0__.blockManager.getElevationAt(x, z);
-                if (elevation < _state__WEBPACK_IMPORTED_MODULE_3__.state.worldHeight - 1) {
-                    new _blocks__WEBPACK_IMPORTED_MODULE_0__.Block({
-                        chunk: this,
-                        x: x,
-                        y: elevation + 1,
-                        z: z,
-                        lightness: 1,
-                        blockType: blockType
-                    });
-                }
-                break;
-            }
+            // case EBlockReplacingStrategy.Stack: {
+            //     let elevation = blockManager.getElevationAt(x, z)
+            //     if (elevation < state.worldHeight - 1) {
+            //         new Block({
+            //             chunk: this,
+            //             x: x,
+            //             y: elevation + 1,
+            //             z: z,
+            //             lightness: 1,
+            //             blockType: blockType
+            //         })
+            //     }
+            //     break;
+            // }
         }
     }
     _getBlocksRatioForRule(x, z, creationRule) {
