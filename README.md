@@ -1,6 +1,6 @@
-# hexworld
+# brickscape
 
-See [hexworld](https://sanyabeast.github.io/hexworld/dist/).
+See [hexworld](https://sanyabeast.github.io/brickscape/dist/).
 
 ## Project setup
 ```
