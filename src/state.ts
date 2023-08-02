@@ -6,6 +6,7 @@ import { MapManager } from "./map"
 import { Block, BlockManager, BlockShape, blockManager } from "./blocks"
 import { isMobileDevice } from "./utils"
 import { WorldManager } from "./world"
+import { RenderingHelper } from "./renderer"
 
 export enum FeatureLevel {
     Low,
@@ -25,10 +26,9 @@ interface IAppState {
     worldHeight: number
     map: MapManager
     controls: VoxelWorldControls
-    canvas: HTMLCanvasElement
     camera: PerspectiveCamera
     scene: Scene
-    renderer: WebGLRenderer
+    renderer: RenderingHelper
     generator: GenerationHelper,
     tasker: Tasker
     world: WorldManager
@@ -46,7 +46,6 @@ export const state: IAppState = {
     renderer: null,
     controls: null,
     map: null,
-    canvas: null,
     generator: null,
     tasker: null,
     world: null,

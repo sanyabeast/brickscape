@@ -1,4 +1,4 @@
-import { Vector3, TextureLoader, MeshStandardMaterial, MeshLambertMaterial, Material, ShaderMaterial, Vector2, NearestFilter, LinearFilter, NearestMipMapLinearFilter, MeshToonMaterial, RepeatWrapping } from "three";
+import { Vector3, TextureLoader, MeshStandardMaterial, MeshLambertMaterial, Material, ShaderMaterial, Vector2, NearestFilter, LinearFilter, NearestMipMapLinearFilter, MeshToonMaterial, RepeatWrapping, MeshPhysicalMaterial } from "three";
 import { FeatureLevel, featureLevel, state } from "./state";
 import { blockManager } from "./blocks";
 
@@ -85,7 +85,7 @@ function _patchMaterial(mat, hooks: string[]) {
     let _resVector = new Vector2(0, 0)
     shader.uniforms.uResolution = {
       get value() {
-        _resVector.set(state.canvas.width, state.canvas.height)
+        _resVector.set(state.renderer.width, state.renderer.height)
         return _resVector
       },
       get needsUpdate() {
@@ -224,6 +224,33 @@ export class VoxelBlockStandardMaterial extends MeshStandardMaterial {
       metalness: 0,
       envMapIntensity: 0.25,
       flatShading: true
+    });
+
+    // Patch the material with custom shaders and uniforms
+    _patchMaterial(this, [
+      '#define STANDARD',
+      '#include <uv_vertex>',
+      '#include <fog_vertex>',
+      '#define STANDARD',
+      '#include <clipping_planes_fragment>',
+      '#include <color_fragment>',
+      '#include <aomap_fragment>',
+      '#include <transmission_fragment>'
+    ])
+  }
+
+}
+
+export class VoxelBlockPhysicalMaterial extends MeshPhysicalMaterial {
+  uniforms = null
+  constructor() {
+    super({
+      // Define additional properties specific to your needs with MeshStandardMaterial
+      roughness: 1,
+      metalness: 0,
+      envMapIntensity: 0.25,
+      flatShading: true,
+      specularIntensity: 1
     });
 
     // Patch the material with custom shaders and uniforms

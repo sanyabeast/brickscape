@@ -14,6 +14,10 @@ function getRandomColorFromStringSeed(str) {
     return randomColor;
 }
 
+export function printd(...args) {
+    console.log(...args)
+}
+
 export function getNearestMultiple(num: number, div: number = 1) {
     return Math.floor(num / div) * div
 }
