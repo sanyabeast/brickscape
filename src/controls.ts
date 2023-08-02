@@ -5,7 +5,7 @@ export class VoxelMapControls extends MapControls {
         super(camera, domElement)
         this.screenSpacePanning = false;
         this.minDistance = 20;
-        this.maxDistance = 150;
+        this.maxDistance = 100;
         this.maxPolarAngle = (Math.PI / 2.5);
         this.maxPolarAngle = (Math.PI);
         this.enableDamping = false

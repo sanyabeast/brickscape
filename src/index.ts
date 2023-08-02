@@ -20,7 +20,7 @@ async function main() {
     state.blockManager = blockManager
 
     
-    const fov = 60;
+    const fov = 80;
     const near = 0.1;
     const far = 2048;
     let aspect = 2;  // the canvas default

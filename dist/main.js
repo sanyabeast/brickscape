@@ -17876,7 +17876,7 @@ class VoxelMapControls extends three_examples_jsm_controls_MapControls__WEBPACK_
         super(camera, domElement);
         this.screenSpacePanning = false;
         this.minDistance = 20;
-        this.maxDistance = 150;
+        this.maxDistance = 100;
         this.maxPolarAngle = (Math.PI / 2.5);
         this.maxPolarAngle = (Math.PI);
         this.enableDamping = false;
@@ -84282,7 +84282,7 @@ function main() {
         _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker = _tasker__WEBPACK_IMPORTED_MODULE_6__.tasker;
         _state__WEBPACK_IMPORTED_MODULE_3__.state.world = _world__WEBPACK_IMPORTED_MODULE_7__.worldManager;
         _state__WEBPACK_IMPORTED_MODULE_3__.state.blockManager = _blocks__WEBPACK_IMPORTED_MODULE_8__.blockManager;
-        const fov = 60;
+        const fov = 80;
         const near = 0.1;
         const far = 2048;
         let aspect = 2; // the canvas default
