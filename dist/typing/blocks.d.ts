@@ -18,11 +18,14 @@ export declare enum BlockType {
     Water = 6,
     Pumpkin = 7,
     Wood = 8,
-    Leaves = 9
+    Leaves = 9,
+    Grass = 10,
+    Bamboo = 11
 }
 export interface IBlockDescriptor {
     tile: number[];
     light?: boolean;
+    animation?: boolean;
 }
 export interface IBlockTable {
     [x: string]: IBlockDescriptor;

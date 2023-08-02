@@ -1,3 +1,4 @@
+export declare function printd(...args: any[]): void;
 export declare function getNearestMultiple(num: number, div?: number): number;
 export declare function getNearestMultipleUp(num: number, div?: number): number;
 export declare function getAlpha(a: any, b: any, test: any): number;

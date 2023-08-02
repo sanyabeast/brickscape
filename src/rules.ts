@@ -1,4 +1,4 @@
-import { BlockType } from "./blocks"
+import { Block, BlockType } from "./blocks"
 import { state } from "./state"
 import { structures } from "./structures"
 
@@ -250,6 +250,54 @@ export const rules: IBlocksGenerationRule[] = [
                 }],
                 stack: true,
                 params: { scale: 0.3, iterations: 0, scaleStep: 1.11, seed: 11313, addent: -0.88, multiplier: 0.5 }
+            },
+        ]
+    },
+
+    {
+        structure: getSingleBlockStructure(BlockType.Grass),
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [BlockType.Dirt],
+                levels: [{
+                    min: 23,
+                    max: 24
+                }],
+                stack: true,
+                params: { scale: 0.2, iterations: 2, scaleStep: 1.1, seed: 1244, addent: -0.2, multiplier: 3 }
+            },
+        ]
+    },
+
+    {
+        structure: [
+            {
+                blockType: BlockType.Bamboo,
+                offset: [0, -1, 0]
+            },
+            {
+                blockType: BlockType.Bamboo,
+                offset: [0, 0, 0]
+            },
+            {
+                blockType: BlockType.Bamboo,
+                offset: [0, 1, 0]
+            },
+        ],
+        create: [
+            {
+                source: EBlockCreationSource.Simplex,
+                replace: EBlockReplacingStrategy.Replace,
+                replaceInclude: [BlockType.Water],
+                replaceExclude: [BlockType.Grass],
+                levels: [{
+                    min: 20,
+                    max: 24
+                }],
+                stack: true,
+                params: { scale: 0.2, iterations: 1, scaleStep: 1.2, seed: 412, addent: -0.6, multiplier: 1.6 }
             },
         ]
     },

@@ -1,9 +1,13 @@
-import { MeshStandardMaterial, MeshLambertMaterial, Material, MeshToonMaterial } from "three";
+import { MeshStandardMaterial, MeshLambertMaterial, Material, MeshToonMaterial, MeshPhysicalMaterial } from "three";
 export declare const _perlinNoiseTexture: import("three").Texture;
 /**
  * Represents a custom material based on MeshStandardMaterial with voxel rendering capabilities.
  */
 export declare class VoxelBlockStandardMaterial extends MeshStandardMaterial {
+    uniforms: any;
+    constructor();
+}
+export declare class VoxelBlockPhysicalMaterial extends MeshPhysicalMaterial {
     uniforms: any;
     constructor();
 }

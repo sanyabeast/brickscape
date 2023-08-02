@@ -3,7 +3,7 @@ import { logd } from "./utils"
 import { state } from "./state"
 import { getBlockBaseMaterial } from "./shaders"
 import { Task } from "./tasker"
-import { Block, BlockShape, blockManager } from "./blocks"
+import { Block, BlockShape, blockManager, blockTable } from "./blocks"
 import { worldManager } from "./world"
 import { monitoringData } from "./gui"
 import { debounce } from "lodash"
@@ -29,7 +29,7 @@ export class Chunk extends Group {
     _buildTask: Task = null
     _built: boolean = false
     _instanceDataAttribute: InstancedBufferAttribute = null
-    _instanceVisibilityAttribute: InstancedBufferAttribute = null
+    _instanceExtraDataAttribute: InstancedBufferAttribute = null
     _instancedMesh: InstancedMesh = null
     _gridHelper: GridHelper
 
@@ -62,7 +62,7 @@ export class Chunk extends Group {
         // Create instanced mesh for rendering blocks
         this._instancedMesh = Chunk._createInstancedMesh()
         this._instanceDataAttribute = this._instancedMesh.geometry.attributes['instanceData'] as InstancedBufferAttribute
-        this._instanceVisibilityAttribute = this._instancedMesh.geometry.attributes['instanceVisibility'] as InstancedBufferAttribute
+        this._instanceExtraDataAttribute = this._instancedMesh.geometry.attributes['instanceExtraData'] as InstancedBufferAttribute
         this.add(this._instancedMesh)
 
         // Create grid helper for visual debugging
@@ -92,14 +92,16 @@ export class Chunk extends Group {
                 let instanceIndex = this._computedInstanceIndex(x, y, z);
                 if (block) {
                     _blocksInChunk++
-                    this._instanceVisibilityAttribute.setX(instanceIndex, 1)
+                    this._instanceExtraDataAttribute.setX(instanceIndex, 1)
+                    let animSpeed = blockTable[block.btype].animation === true ? 1 : 0
+                    this._instanceExtraDataAttribute.setY(instanceIndex, animSpeed)
                     this._instanceDataAttribute.setXYZ(instanceIndex, block.tileX, block.tileY, block.lightness)
                 } else {
-                    this._instanceVisibilityAttribute.setX(instanceIndex, 0)
+                    this._instanceExtraDataAttribute.setX(instanceIndex, 0)
                 }
             })
 
-            this._instanceVisibilityAttribute.needsUpdate = true
+            this._instanceExtraDataAttribute.needsUpdate = true
             this._instanceDataAttribute.needsUpdate = true
 
         }
@@ -213,20 +215,21 @@ export class Chunk extends Group {
             const _instanceDataArray = new Float32Array(blockManager.maxBlocksPerChunk * 3)
             const _instanceDataAttribute = new InstancedBufferAttribute(_instanceDataArray, 3);
 
-            const _instanceVisibilityArray = new Float32Array(blockManager.maxBlocksPerChunk)
-            const _instanceVisibilityAttribute = new InstancedBufferAttribute(_instanceVisibilityArray, 1);
+            const _instaneExtraDataArray = new Float32Array(blockManager.maxBlocksPerChunk * 3)
+            const _instanceExtraDataAttribute = new InstancedBufferAttribute(_instaneExtraDataArray, 3);
+
 
             // Get the base block material
             Chunk._baseBlockMaterial = Chunk._baseBlockMaterial || getBlockBaseMaterial()
 
             for (let i = 0; i < blockManager.maxBlocksPerChunk; i++) {
                 _instanceDataAttribute.setXYZ(i, 0, 0, 1);
-                _instanceVisibilityAttribute.setX(i, 0)
+                _instanceExtraDataAttribute.setX(i, 0)
             }
 
             // Set instance attributes to the instanced geometry
             _instancedBlockGeometry.setAttribute('instanceData', _instanceDataAttribute);
-            _instancedBlockGeometry.setAttribute('instanceVisibility', _instanceVisibilityAttribute);
+            _instancedBlockGeometry.setAttribute('instanceExtraData', _instanceExtraDataAttribute);
 
             // Create the base instanced mesh
             Chunk._baseInstancedMesh = new InstancedMesh(_instancedBlockGeometry, Chunk._baseBlockMaterial, blockManager.maxBlocksPerChunk);

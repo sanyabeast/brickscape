@@ -13,7 +13,7 @@ export declare class Chunk extends Group {
     _buildTask: Task;
     _built: boolean;
     _instanceDataAttribute: InstancedBufferAttribute;
-    _instanceVisibilityAttribute: InstancedBufferAttribute;
+    _instanceExtraDataAttribute: InstancedBufferAttribute;
     _instancedMesh: InstancedMesh;
     _gridHelper: GridHelper;
     /**
