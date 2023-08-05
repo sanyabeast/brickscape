@@ -203,14 +203,20 @@ export class BlockManager {
         }
         return !!block
     }
-
     getBlockAt(x: number, y: number, z: number): Block {
+        x = Math.floor(x)
+        y = Math.floor(y)
+        z = Math.floor(z)
+
         return this.blocks[this.getBlockId(x, y, z)]
     }
     getBlockId(...args: number[]): string {
         return args.join('_')
     }
     getMostElevatedBlockAt(x: number, z: number): Block {
+        x = Math.floor(x)
+        z = Math.floor(z)
+
         let r: Block = null
 
         for (let i = 0; i < state.worldHeight; i++) {
@@ -223,9 +229,29 @@ export class BlockManager {
         return r
     }
     getElevationAt(x: number, z: number): number {
+        x = Math.floor(x)
+        z = Math.floor(z)
+
         let r: number = -1
 
         for (let i = 0; i < state.worldHeight; i++) {
+            let b = this.getBlockAt(x, i, z)
+            if (b) {
+                r = i
+            }
+        }
+
+        return r
+    }
+
+    getElevationAtUnder(x: number, y: number, z: number): number {
+        x = Math.floor(x)
+        y = Math.floor(y)
+        z = Math.floor(z)
+
+        let r: number = -1
+
+        for (let i = 0; i < Math.min(y, state.worldHeight); i++) {
             let b = this.getBlockAt(x, i, z)
             if (b) {
                 r = i
@@ -240,16 +266,6 @@ export class BlockManager {
         return state.chunkSize * state.chunkSize * state.worldHeight
     }
 
-    // iterateGrid(fx: number, fy: number, fz: number, tx: number, ty: number, tz: number, iteratee: FBlocksGridIteratee) {
-    //     for (let z = fz; z < tz; z++) {
-    //         for (let x = fx; x < tx; x++) {
-    //             for (let y = fy; y < ty; y++) {
-    //                 iteratee(x, y, z, this.getBlockAt(x, y, z))
-    //             }
-    //         }
-    //     }
-    // }
-
     iterateGridXZ(fx: number, fz: number, tx: number, tz: number, iteratee: FBlocksGridIterateeXZ) {
         for (let z = fz; z < tz; z++) {
             for (let x = fx; x < tx; x++) {
@@ -259,16 +275,6 @@ export class BlockManager {
     }
 
     traverseChunk(cx: number, cz: number, iteratee: FChunkGridIteratee) {
-        // this.iterateGrid(
-        //     cx * state.chunkSize,
-        //     0,
-        //     cz * state.chunkSize,
-        //     cx * state.chunkSize + state.chunkSize,
-        //     state.worldHeight,
-        //     cz * state.chunkSize + state.chunkSize,
-        //     iteratee
-        // );
-
         for (let z = 0; z < state.chunkSize; z++) {
             for (let x = 0; x < state.chunkSize; x++) {
                 for (let y = 0; y < state.worldHeight; y++) {

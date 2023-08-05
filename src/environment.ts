@@ -49,15 +49,16 @@ export class Environment extends Group {
     sun: DirectionalLight = null
     ambient: AmbientLight = null
     fog: FogExp2 = null
-    daytime: number = 0.8
-    dayspeed: number = 1 / 2048
+    daytime: number = 0.7
+    dayspeed: number = 1 / 60
     sunRotationRadius: number = (state.drawChunks * state.chunkSize) * 4
     sunElevation: number = 2
+
     minSunIntensity: number = -0.5
     maxSunIntensity: number = 0.5
 
     minAmbIntensity: number = 0.05
-    maxAmbIntensity: number = 0.5
+    maxAmbIntensity: number = 0.6
 
     constructor({ scene, camera, renderer }) {
         super()
@@ -73,7 +74,7 @@ export class Environment extends Group {
         this.add(sun)
 
         if (featureLevel > 0) {
-            Environment.addFlares(sun, this)
+            Environment.addFlares(sun, this, 5, 2)
         }
 
         if (featureLevel == 0) {
@@ -93,16 +94,15 @@ export class Environment extends Group {
             scene.backgroundBlurriness = 1
         });
 
-        this.update(0)
+        this.update()
     }
 
-    update(frameDelta: number) {
+    update() {
         if (state.map) {
             this.position.set(state.map.activeChunk[0] * state.chunkSize, 0, state.map.activeChunk[1] * state.chunkSize)
         }
 
-        let sunHeight = clamp(Math.sin(this.daytime * Math.PI * 2) + 0.5, -1, 1)
-        let backgroundIntensity = clamp(sunHeight + 0.1, 0, 1)
+        let sunHeight = clamp(Math.sin(this.daytime * Math.PI * 2) + 0.5, -1, 1);
 
         let angle = this.daytime * Math.PI * 2;
         let sunX = Math.cos(angle) * this.sunRotationRadius;
@@ -115,30 +115,31 @@ export class Environment extends Group {
         }
 
 
-        (state.scene as any).backgroundIntensity = backgroundIntensity;
-
         if (featureLevel > 0) {
-            let envMapIntensity = lerp(this.minAmbIntensity, this.maxAmbIntensity, clamp(sunHeight, 0, 1))
+
+            let envMapIntensity = lerp(this.minAmbIntensity, this.maxAmbIntensity, clamp(sunHeight, 0, 1));
+            (state.scene as any).backgroundIntensity = envMapIntensity;
             state.scene.traverse((object: any) => {
                 if (object.isMesh) {
                     object.material.envMapIntensity = envMapIntensity
                 }
             })
         } else {
-            let ambIntensity = lerp(this.minAmbIntensity, this.maxAmbIntensity, clamp(sunHeight, 0, 1))
+            let ambIntensity = lerp(this.minAmbIntensity, this.maxAmbIntensity, clamp(sunHeight, 0, 1));
+            (state.scene as any).backgroundIntensity = ambIntensity;
             this.ambient.intensity = ambIntensity
         }
 
 
-        this.daytime += this.dayspeed * frameDelta
+        this.daytime += this.dayspeed * state.timeDelta
     }
 
-    static addFlares(light: Light, scene: Object3D, count: number = 5) {
+    static addFlares(light: Light, scene: Object3D, count: number = 5, sizeScale: number = 1) {
         const lensflare = new Lensflare();
         flaresTable.forEach((flareData, index) => {
             if (index < count) {
                 const lensFlareTexture = textureLoader.load(flareData.texture);
-                lensflare.addElement(new LensflareElement(lensFlareTexture, flareData.size, flareData.distance, new Color(0xffffff)));
+                lensflare.addElement(new LensflareElement(lensFlareTexture, (flareData.size * sizeScale), flareData.distance, new Color(0xffffff)));
                 // lensflare.position.copy(light.position);
                 console.log(lensflare)
             }

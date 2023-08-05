@@ -1,5 +1,5 @@
 import { PerspectiveCamera, WebGLRenderer, Scene } from 'three';
-import { VoxelMapControls } from './controls';
+import { BrickscapeHeroControls, BrickscapeEagleControls, getControlsOfType, EBrickscapeControlsType } from './controls';
 import { MapManager } from './map';
 import { createGui } from './gui';
 import { FeatureLevel, featureLevel, state } from './state'
@@ -10,16 +10,15 @@ import { worldManager } from './world';
 import { blockManager } from './blocks';
 import { updateGlobalUniforms } from './shaders';
 import { RenderingHelper } from './renderer';
+import { stat } from 'fs';
 
 
 async function main() {
-
     state.generator = generationHelper
     state.tasker = tasker
     state.world = worldManager
     state.blockManager = blockManager
 
-    
     const fov = 80;
     const near = 0.1;
     const far = 2048;
@@ -41,7 +40,7 @@ async function main() {
 
     scene.add(environment)
     // CONTROLS
-    let controls = state.controls = new VoxelMapControls(camera, renderer.canvas)
+    let controls = state.controls = getControlsOfType(EBrickscapeControlsType.Eagle)
     // MAP
     const map = state.map = new MapManager({
         camera
@@ -50,21 +49,22 @@ async function main() {
     scene.add(map)
 
     // RENDER LOOP
-    let prevFrameTime = +new Date()
+    let prevFrameTime = performance.now();
     function render() {
-        let now = +new Date()
-        let frameTimeDelta = now - prevFrameTime
-        let frameDelta = frameTimeDelta / (1000 / 60)
+        let now = performance.now();
+        let timeDelta = (now - prevFrameTime) / 1000
+        let frameDelta = (timeDelta / (1 / 60))
+        prevFrameTime = now
+
+        state.frameDelta = frameDelta
+        state.timeDelta = timeDelta
 
         requestAnimationFrame(render);
-
-        updateGlobalUniforms(frameDelta)
-        environment.update(frameDelta)
+        updateGlobalUniforms()
+        environment.update()
         map.update()
         controls.update()
         renderer.render();
-        prevFrameTime = now
-
     }
 
     createGui({

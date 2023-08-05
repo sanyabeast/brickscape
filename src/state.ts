@@ -1,6 +1,6 @@
 import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
 import { GenerationHelper } from "./generator"
-import { VoxelMapControls as VoxelWorldControls } from "./controls"
+import { IBrickscapeControls, BrickscapeEagleControls as VoxelWorldControls } from "./controls"
 import { Tasker } from "./tasker"
 import { MapManager } from "./map"
 import { Block, BlockManager, BlockShape, blockManager } from "./blocks"
@@ -19,13 +19,15 @@ export let featureLevel = isMobileDevice() ? FeatureLevel.Low : FeatureLevel.Mid
 
 
 interface IAppState {
+    frameDelta: number,
+    timeDelta: number,
     seed: number,
     chunkSize: number,
     drawChunks: number
     blockShape: BlockShape
     worldHeight: number
     map: MapManager
-    controls: VoxelWorldControls
+    controls: IBrickscapeControls
     camera: PerspectiveCamera
     scene: Scene
     renderer: RenderingHelper
@@ -36,6 +38,8 @@ interface IAppState {
 }
 
 export const state: IAppState = {
+    frameDelta: 1,
+    timeDelta: 0,
     seed: 454,
     chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,

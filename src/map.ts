@@ -4,34 +4,14 @@ import { FeatureLevel, featureLevel, state } from "./state"
 import { Chunk } from "./chunk";
 import { monitoringData } from "./gui";
 import { worldManager } from "./world";
-import { chunk, debounce, find, throttle } from "lodash";
-import { QueueType } from "./tasker";
+import { find, throttle } from "lodash";
 
-// Define a plane representing the ground in the scene
-let _groundPlane = new Plane(new Vector3(0, 1, 0), 0);
-
-// Vector to store the intersection point of the ray and the ground plane
-let _intersection = new Vector3();
-
-// Create a raycaster for detecting intersections with the ground plane
-let _raycaster = new Raycaster();
 
 // Chunk update rate limit in milliseconds
 let _chunkUpdateRateLimit: number = (FeatureLevel.Low + 1) * 5;
 
 // Chunk sync rate limit in milliseconds
 let _chunkSyncRateLimit: number = (FeatureLevel.Low + 1) * 15;
-
-/**
- * Get the intersection point of the camera's look direction with the ground plane.
- * @param {Camera} camera - The camera object to use for raycasting.
- * @returns {Vector3} - The intersection point of the ray and the ground plane.
- */
-export function getCameraLookIntersection(camera) {
-    _raycaster.setFromCamera(new Vector2(0, 0), camera);
-    _raycaster.ray.intersectPlane(_groundPlane, _intersection);
-    return _intersection;
-}
 
 /**
  * A custom Group class representing the Map Manager which handles loading and unloading of chunks.
@@ -63,9 +43,10 @@ export class MapManager extends Group {
      * This function should be called in the update/render loop to update the manager.
      */
     update() {
-        let cameraLook = getCameraLookIntersection(this.camera);
-        let cx = getNearestMultiple(cameraLook.x, state.chunkSize) / state.chunkSize;
-        let cz = getNearestMultiple(cameraLook.z, state.chunkSize) / state.chunkSize;
+        let controlsAnchor = state.controls.getAnchorPosition()
+
+        let cx = getNearestMultiple(controlsAnchor.x, state.chunkSize) / state.chunkSize;
+        let cz = getNearestMultiple(controlsAnchor.z, state.chunkSize) / state.chunkSize;
 
         if (cx !== this.activeChunk[0] || cz != this.activeChunk[1]) {
             this.activeChunk[0] = cx;

@@ -53,7 +53,7 @@ function _patchMaterial(mat, hooks: string[]) {
     uTime: { value: 0 },
     uResolution: { value: new Vector2() },
     uFogHeight: { value: state.worldHeight * 0.666 },
-    uWindSpeed: { value: 0.25 },
+    uWindSpeed: { value: 0.01 },
     uFogDisturbanceScale: { value: 150 }
 
   }
@@ -384,6 +384,6 @@ export function getBlockBaseMaterial(): Material {
   return featureLevel === FeatureLevel.Low ? new VoxelBlockStandardMaterial() : new VoxelBlockStandardMaterial()
 }
 
-export function updateGlobalUniforms(frameDelta: number) {
-  _shaderTime = _shaderTime + (frameDelta / 1000)
+export function updateGlobalUniforms() {
+  _shaderTime = _shaderTime + state.timeDelta
 }
