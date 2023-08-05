@@ -11,6 +11,8 @@ export declare class RenderingHelper {
     get width(): number;
     get height(): number;
     constructor(params: IBrickscapeRendererParams);
+    initialize(): void;
     render(): void;
+    reset(): void;
     _updateRenderSize(): void;
 }

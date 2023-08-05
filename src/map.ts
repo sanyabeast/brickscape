@@ -17,17 +17,15 @@ let _chunkSyncRateLimit: number = (FeatureLevel.Low + 1) * 15;
  * A custom Group class representing the Map Manager which handles loading and unloading of chunks.
  */
 export class MapManager extends Group {
-    camera = null;
-    activeChunk = null;
+    activeChunk: number[] = null;
     _activeChunks: Chunk[];
 
     /**
      * Create a new Map Manager.
      * @param {Object} options - Options object containing the camera reference.
      */
-    constructor({ camera }) {
+    constructor() {
         super();
-        this.camera = camera;
         this.activeChunk = [null, null];
         this._activeChunks = [];
 
@@ -36,6 +34,8 @@ export class MapManager extends Group {
 
         // Throttled function to sync the chunks
         this._syncChunks = throttle(this._syncChunks.bind(this), 1000 / _chunkSyncRateLimit);
+
+        state.scene.add(this)
     }
 
     /**

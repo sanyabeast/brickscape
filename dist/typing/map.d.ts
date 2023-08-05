@@ -1,25 +1,16 @@
-import { Group, Vector3 } from "three";
+import { Group } from "three";
 import { Chunk } from "./chunk";
-/**
- * Get the intersection point of the camera's look direction with the ground plane.
- * @param {Camera} camera - The camera object to use for raycasting.
- * @returns {Vector3} - The intersection point of the ray and the ground plane.
- */
-export declare function getCameraLookIntersection(camera: any): Vector3;
 /**
  * A custom Group class representing the Map Manager which handles loading and unloading of chunks.
  */
 export declare class MapManager extends Group {
-    camera: any;
-    activeChunk: any;
+    activeChunk: number[];
     _activeChunks: Chunk[];
     /**
      * Create a new Map Manager.
      * @param {Object} options - Options object containing the camera reference.
      */
-    constructor({ camera }: {
-        camera: any;
-    });
+    constructor();
     /**
      * Update the Map Manager.
      * This function should be called in the update/render loop to update the manager.

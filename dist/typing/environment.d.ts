@@ -11,11 +11,7 @@ export declare class Environment extends Group {
     maxSunIntensity: number;
     minAmbIntensity: number;
     maxAmbIntensity: number;
-    constructor({ scene, camera, renderer }: {
-        scene: any;
-        camera: any;
-        renderer: any;
-    });
-    update(frameDelta: number): void;
-    static addFlares(light: Light, scene: Object3D, count?: number): void;
+    constructor();
+    update(): void;
+    static addFlares(light: Light, scene: Object3D, count?: number, sizeScale?: number): void;
 }

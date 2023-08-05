@@ -28,7 +28,6 @@ interface IAppState {
     worldHeight: number
     map: MapManager
     controls: IBrickscapeControls
-    camera: PerspectiveCamera
     scene: Scene
     renderer: RenderingHelper
     generator: GenerationHelper,
@@ -45,7 +44,6 @@ export const state: IAppState = {
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
     blockShape: BlockShape.Cube,
     worldHeight: 24,
-    camera: null,
     scene: null,
     renderer: null,
     controls: null,

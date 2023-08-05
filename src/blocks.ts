@@ -38,6 +38,7 @@ export interface IBlockDescriptor {
     tile: number[]
     light?: boolean
     animation?: boolean
+    tangibility: number
 }
 
 export interface IBlockTable {
@@ -48,41 +49,53 @@ export interface IBlockTable {
 export const blockTable: IBlockTable = {
     [BlockType.None]: {
         tile: [0, 0],
+        tangibility: 1
     },
     [BlockType.Gravel]: {
-        tile: [0, 0]
+        tile: [0, 0],
+        tangibility: 1
     },
     [BlockType.Rock]: {
-        tile: [0, 1]
+        tile: [0, 1],
+        tangibility: 1
     },
     [BlockType.Dirt]: {
         tile: [2, 0],
+        tangibility: 1
     },
     [BlockType.Sand]: {
-        tile: [2, 1]
+        tile: [2, 1],
+        tangibility: 1
     },
     [BlockType.Bedrock]: {
-        tile: [1, 1]
+        tile: [1, 1],
+        tangibility: 1
     },
     [BlockType.Water]: {
         tile: [15, 13],
-        animation: true
+        tangibility: 0.5,
+        animation: true,
     },
     [BlockType.Pumpkin]: {
         tile: [8, 7],
-        light: true
+        light: true,
+        tangibility: 1
     },
     [BlockType.Wood]: {
-        tile: [4, 1]
+        tile: [4, 1],
+        tangibility: 0
     },
     [BlockType.Leaves]: {
-        tile: [0, 3]
+        tile: [0, 3],
+        tangibility: 0
     },
     [BlockType.Grass]: {
-        tile: [12, 5]
+        tile: [12, 5],
+        tangibility: 0
     },
     [BlockType.Bamboo]: {
-        tile: [9, 4]
+        tile: [9, 4],
+        tangibility: 0,
     }
 }
 
@@ -124,6 +137,10 @@ export class Block {
 
     get isLightSource(): boolean {
         return blockTable[this.btype].light === true
+    }
+
+    get tangibility() {
+        return blockTable[this.btype].tangibility
     }
 
     constructor({ x, y, z, chunk, lightness, blockType }) {
@@ -244,7 +261,7 @@ export class BlockManager {
         return r
     }
 
-    getElevationAtUnder(x: number, y: number, z: number): number {
+    getElevationAtPosition(x: number, y: number, z: number, minTangibility: number = 1): number {
         x = Math.floor(x)
         y = Math.floor(y)
         z = Math.floor(z)
@@ -253,9 +270,24 @@ export class BlockManager {
 
         for (let i = 0; i < Math.min(y, state.worldHeight); i++) {
             let b = this.getBlockAt(x, i, z)
-            if (b) {
+            if (b && b.tangibility > minTangibility) {
                 r = i
             }
+        }
+
+        return r
+    }
+
+    getTangibilityAtPosition(x: number, y: number, z: number) {
+        x = Math.floor(x)
+        y = Math.floor(y)
+        z = Math.floor(z)
+
+        let r: number = 0
+        let b = this.getBlockAt(x, y, z)
+
+        if (b) {
+            r = b.tangibility
         }
 
         return r

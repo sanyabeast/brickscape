@@ -26,6 +26,7 @@ export interface IBlockDescriptor {
     tile: number[];
     light?: boolean;
     animation?: boolean;
+    tangibility: number;
 }
 export interface IBlockTable {
     [x: string]: IBlockDescriptor;
@@ -44,6 +45,7 @@ export declare class Block {
     get tileX(): number;
     get tileY(): number;
     get isLightSource(): boolean;
+    get tangibility(): number;
     constructor({ x, y, z, chunk, lightness, blockType }: {
         x: any;
         y: any;
@@ -73,6 +75,8 @@ export declare class BlockManager {
     getBlockId(...args: number[]): string;
     getMostElevatedBlockAt(x: number, z: number): Block;
     getElevationAt(x: number, z: number): number;
+    getElevationAtPosition(x: number, y: number, z: number, minTangibility?: number): number;
+    getTangibilityAtPosition(x: number, y: number, z: number): number;
     get maxBlocksPerChunk(): number;
     iterateGridXZ(fx: number, fz: number, tx: number, tz: number, iteratee: FBlocksGridIterateeXZ): void;
     traverseChunk(cx: number, cz: number, iteratee: FChunkGridIteratee): void;

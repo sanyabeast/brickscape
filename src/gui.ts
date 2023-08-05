@@ -1,5 +1,6 @@
 import { debounce } from 'lodash';
 import { Pane } from 'tweakpane';
+import { EBrickscapeControlsType, setActiveControls } from './controls';
 
 const appInfo = `
 ## DESCRIPTION
@@ -24,11 +25,25 @@ export const monitoringData: { [x: string]: string } = {
     chunksPoolSize: ''
 }
 
-export function createGui({ scene, camera, renderer }) {
+export function createGui() {
     const controlPane = new Pane();
     const controlsFolder = controlPane.addFolder({
         title: 'Controls',
-        expanded: false
+        expanded: true
+    })
+
+    controlsFolder.addButton({
+        title: 'Eagle View',
+        label: ""
+    }).on('click', ()=>{
+        setActiveControls(EBrickscapeControlsType.Eagle)
+    })
+
+    controlsFolder.addButton({
+        title: 'Hero View',
+        label: "(in test)"
+    }).on('click', ()=>{
+        setActiveControls(EBrickscapeControlsType.Hero)
     })
 
     const monitorFolder = controlPane.addFolder({
@@ -45,13 +60,6 @@ export function createGui({ scene, camera, renderer }) {
         multiline: true,
         lineCount: 16,
     });
-
-    const updateProjectionMatrix = debounce(() => camera.updateProjectionMatrix(), 100)
-
-    controlsFolder.addInput(camera, 'fov', {
-        min: 30,
-        max: 179,
-    }).on('change', e => updateProjectionMatrix());
 
     for (let k in monitoringData) {
         monitorFolder.addMonitor(monitoringData, k);

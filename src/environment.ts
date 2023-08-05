@@ -60,8 +60,10 @@ export class Environment extends Group {
     minAmbIntensity: number = 0.05
     maxAmbIntensity: number = 0.6
 
-    constructor({ scene, camera, renderer }) {
+    constructor() {
         super()
+
+        let scene = state.scene
 
         this.fog = new FogExp2(new Color(0x777777), 0.33)
 
@@ -93,6 +95,8 @@ export class Environment extends Group {
             scene.backgroundIntensity = 1
             scene.backgroundBlurriness = 1
         });
+
+        state.scene.add(this)
 
         this.update()
     }

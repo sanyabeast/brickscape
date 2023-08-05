@@ -1,6 +1,6 @@
-import { PerspectiveCamera, Scene } from "three";
+import { Scene } from "three";
 import { GenerationHelper } from "./generator";
-import { VoxelMapControls as VoxelWorldControls } from "./controls";
+import { IBrickscapeControls } from "./controls";
 import { Tasker } from "./tasker";
 import { MapManager } from "./map";
 import { BlockManager, BlockShape } from "./blocks";
@@ -13,14 +13,15 @@ export declare enum FeatureLevel {
 }
 export declare let featureLevel: FeatureLevel;
 interface IAppState {
+    frameDelta: number;
+    timeDelta: number;
     seed: number;
     chunkSize: number;
     drawChunks: number;
     blockShape: BlockShape;
     worldHeight: number;
     map: MapManager;
-    controls: VoxelWorldControls;
-    camera: PerspectiveCamera;
+    controls: IBrickscapeControls;
     scene: Scene;
     renderer: RenderingHelper;
     generator: GenerationHelper;

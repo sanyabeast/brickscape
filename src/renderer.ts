@@ -26,26 +26,23 @@ export class RenderingHelper {
     get height() {
         return this.canvas.height
     }
-
-
     constructor(params: IBrickscapeRendererParams) {
         const canvas = this.canvas = document.createElement('canvas');
-        document.body.appendChild(canvas)
-
         this._renderer = new WebGLRenderer({
             canvas,
             antialias: featureLevel != FeatureLevel.Low
         });
+        this.useComposer = params.useComposer === true
+    }
 
-
+    initialize() {
+        document.body.appendChild(this.canvas)
         this._renderer.setPixelRatio(featureLevel == FeatureLevel.Low ? 1 : _pixelRatio);
 
         let scene = state.scene
-        let camera = state.camera
+        let camera = state.controls.camera
 
-        if (params.useComposer) {
-            this.useComposer = true
-
+        if (this.useComposer) {
             let composer = this._composer = new EffectComposer(this._renderer);
             let renderPass = new RenderPass(scene, camera);
 
@@ -67,14 +64,16 @@ export class RenderingHelper {
         if (this.useComposer) {
             this._composer.render()
         } else {
-            this._renderer.render(state.scene, state.camera)
+            this._renderer.render(state.scene, state.controls.camera)
         }
     }
 
+    reset(){
+        this._updateRenderSize()
+    }
+
     _updateRenderSize() {
-        let aspect = window.innerWidth / window.innerHeight;
-        state.camera.aspect = aspect
-        state.camera.updateProjectionMatrix();
+        state.controls.setAspectRatio(window.innerWidth / window.innerHeight)
 
         this._renderer.setSize(window.innerWidth, window.innerHeight)
         if (this.useComposer) {

@@ -42,8 +42,6 @@ function _patchMaterial(mat, hooks: string[]) {
   // Define the custom uniforms
   mat.uniforms = {
     uLightDirection: { value: new Vector3(0, 10, 2).normalize() },
-    uFar: { value: state.camera.far },
-    uNear: { value: state.camera.near },
     uMaxInstances: { value: blockManager.maxBlocksPerChunk },
     uTilesSF0: { value: _tilesSF0 },
     uTilesSF1: { value: _tilesSF1 },
@@ -62,8 +60,6 @@ function _patchMaterial(mat, hooks: string[]) {
   mat.onBeforeCompile = (shader) => {
     // Pass the custom uniforms to the shader
     shader.uniforms.uLightDirection = mat.uniforms.uLightDirection;
-    shader.uniforms.uFar = mat.uniforms.uFar;
-    shader.uniforms.uNear = mat.uniforms.uNear;
     shader.uniforms.uMaxInstances = mat.uniforms.uMaxInstances;
     shader.uniforms.uTilesSF0 = mat.uniforms.uTilesSF0;
     shader.uniforms.uTilesSF1 = mat.uniforms.uTilesSF1;
@@ -150,8 +146,6 @@ function _patchMaterial(mat, hooks: string[]) {
     shader.fragmentShader = shader.fragmentShader.replace(hooks[3], `
         uniform vec3 uColor;
         uniform vec3 uLightDirection;
-        uniform float uFar;
-        uniform float uNear;
         uniform float uMaxInstances;
 
         uniform sampler2D uTilesSF0;

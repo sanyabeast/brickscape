@@ -34,4 +34,4 @@ export declare class VoxelBlockToonMaterial extends MeshToonMaterial {
  * @returns {Material} - The base material.
  */
 export declare function getBlockBaseMaterial(): Material;
-export declare function updateGlobalUniforms(frameDelta: number): void;
+export declare function updateGlobalUniforms(): void;

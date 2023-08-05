@@ -17374,41 +17374,53 @@ var BlockType;
 const blockTable = {
     [BlockType.None]: {
         tile: [0, 0],
+        tangibility: 1
     },
     [BlockType.Gravel]: {
-        tile: [0, 0]
+        tile: [0, 0],
+        tangibility: 1
     },
     [BlockType.Rock]: {
-        tile: [0, 1]
+        tile: [0, 1],
+        tangibility: 1
     },
     [BlockType.Dirt]: {
         tile: [2, 0],
+        tangibility: 1
     },
     [BlockType.Sand]: {
-        tile: [2, 1]
+        tile: [2, 1],
+        tangibility: 1
     },
     [BlockType.Bedrock]: {
-        tile: [1, 1]
+        tile: [1, 1],
+        tangibility: 1
     },
     [BlockType.Water]: {
         tile: [15, 13],
-        animation: true
+        tangibility: 0.5,
+        animation: true,
     },
     [BlockType.Pumpkin]: {
         tile: [8, 7],
-        light: true
+        light: true,
+        tangibility: 1
     },
     [BlockType.Wood]: {
-        tile: [4, 1]
+        tile: [4, 1],
+        tangibility: 0
     },
     [BlockType.Leaves]: {
-        tile: [0, 3]
+        tile: [0, 3],
+        tangibility: 0
     },
     [BlockType.Grass]: {
-        tile: [12, 5]
+        tile: [12, 5],
+        tangibility: 0
     },
     [BlockType.Bamboo]: {
-        tile: [9, 4]
+        tile: [9, 4],
+        tangibility: 0,
     }
 };
 class Block {
@@ -17435,6 +17447,9 @@ class Block {
     }
     get isLightSource() {
         return blockTable[this.btype].light === true;
+    }
+    get tangibility() {
+        return blockTable[this.btype].tangibility;
     }
     constructor({ x, y, z, chunk, lightness, blockType }) {
         this.bx = null;
@@ -17507,12 +17522,17 @@ class BlockManager {
         return !!block;
     }
     getBlockAt(x, y, z) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        z = Math.floor(z);
         return this.blocks[this.getBlockId(x, y, z)];
     }
     getBlockId(...args) {
         return args.join('_');
     }
     getMostElevatedBlockAt(x, z) {
+        x = Math.floor(x);
+        z = Math.floor(z);
         let r = null;
         for (let i = 0; i < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight; i++) {
             let b = this.getBlockAt(x, i, z);
@@ -17523,6 +17543,8 @@ class BlockManager {
         return r;
     }
     getElevationAt(x, z) {
+        x = Math.floor(x);
+        z = Math.floor(z);
         let r = -1;
         for (let i = 0; i < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight; i++) {
             let b = this.getBlockAt(x, i, z);
@@ -17532,18 +17554,33 @@ class BlockManager {
         }
         return r;
     }
+    getElevationAtPosition(x, y, z, minTangibility = 1) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        z = Math.floor(z);
+        let r = -1;
+        for (let i = 0; i < Math.min(y, _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight); i++) {
+            let b = this.getBlockAt(x, i, z);
+            if (b && b.tangibility > minTangibility) {
+                r = i;
+            }
+        }
+        return r;
+    }
+    getTangibilityAtPosition(x, y, z) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        z = Math.floor(z);
+        let r = 0;
+        let b = this.getBlockAt(x, y, z);
+        if (b) {
+            r = b.tangibility;
+        }
+        return r;
+    }
     get maxBlocksPerChunk() {
         return _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize * _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize * _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight;
     }
-    // iterateGrid(fx: number, fy: number, fz: number, tx: number, ty: number, tz: number, iteratee: FBlocksGridIteratee) {
-    //     for (let z = fz; z < tz; z++) {
-    //         for (let x = fx; x < tx; x++) {
-    //             for (let y = fy; y < ty; y++) {
-    //                 iteratee(x, y, z, this.getBlockAt(x, y, z))
-    //             }
-    //         }
-    //     }
-    // }
     iterateGridXZ(fx, fz, tx, tz, iteratee) {
         for (let z = fz; z < tz; z++) {
             for (let x = fx; x < tx; x++) {
@@ -17552,15 +17589,6 @@ class BlockManager {
         }
     }
     traverseChunk(cx, cz, iteratee) {
-        // this.iterateGrid(
-        //     cx * state.chunkSize,
-        //     0,
-        //     cz * state.chunkSize,
-        //     cx * state.chunkSize + state.chunkSize,
-        //     state.worldHeight,
-        //     cz * state.chunkSize + state.chunkSize,
-        //     iteratee
-        // );
         for (let z = 0; z < _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize; z++) {
             for (let x = 0; x < _state__WEBPACK_IMPORTED_MODULE_0__.state.chunkSize; x++) {
                 for (let y = 0; y < _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight; y++) {
@@ -17867,13 +17895,48 @@ Chunk._baseBlockMaterial = null;
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   VoxelMapControls: () => (/* binding */ VoxelMapControls)
+/* harmony export */   BrickscapeEagleControls: () => (/* binding */ BrickscapeEagleControls),
+/* harmony export */   BrickscapeHeroControls: () => (/* binding */ BrickscapeHeroControls),
+/* harmony export */   EBrickscapeControlsType: () => (/* binding */ EBrickscapeControlsType),
+/* harmony export */   getControlsOfType: () => (/* binding */ getControlsOfType),
+/* harmony export */   setActiveControls: () => (/* binding */ setActiveControls)
 /* harmony export */ });
-/* harmony import */ var three_examples_jsm_controls_MapControls__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three/examples/jsm/controls/MapControls */ "./node_modules/three/examples/jsm/controls/MapControls.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_examples_jsm_controls_MapControls__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three/examples/jsm/controls/MapControls */ "./node_modules/three/examples/jsm/controls/MapControls.js");
+/* harmony import */ var three_examples_jsm_controls_PointerLockControls_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! three/examples/jsm/controls/PointerLockControls.js */ "./node_modules/three/examples/jsm/controls/PointerLockControls.js");
+/* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state */ "./src/state.ts");
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_3__);
 
-class VoxelMapControls extends three_examples_jsm_controls_MapControls__WEBPACK_IMPORTED_MODULE_0__.MapControls {
-    constructor(camera, domElement) {
-        super(camera, domElement);
+
+
+
+
+
+
+var EBrickscapeControlsType;
+(function (EBrickscapeControlsType) {
+    EBrickscapeControlsType[EBrickscapeControlsType["Eagle"] = 0] = "Eagle";
+    EBrickscapeControlsType[EBrickscapeControlsType["Hero"] = 1] = "Hero";
+})(EBrickscapeControlsType || (EBrickscapeControlsType = {}));
+class BrickscapeEagleControls extends three_examples_jsm_controls_MapControls__WEBPACK_IMPORTED_MODULE_4__.MapControls {
+    static getInstance() {
+        var _a;
+        BrickscapeEagleControls.instance = (_a = BrickscapeEagleControls.instance) !== null && _a !== void 0 ? _a : new BrickscapeEagleControls();
+        return BrickscapeEagleControls.instance;
+    }
+    constructor() {
+        let camera = new three__WEBPACK_IMPORTED_MODULE_5__.PerspectiveCamera(80, 1, 0.1, 1000);
+        super(camera, _state__WEBPACK_IMPORTED_MODULE_0__.state.renderer.canvas);
+        this.enabled = false;
+        this._groundPlane = new three__WEBPACK_IMPORTED_MODULE_5__.Plane(new three__WEBPACK_IMPORTED_MODULE_5__.Vector3(0, 1, 0), 0);
+        this._intersection = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3();
+        this._raycaster = new three__WEBPACK_IMPORTED_MODULE_5__.Raycaster();
+        this._nearClip = 0.1;
+        this._farClip = 1000;
+        this.camera = camera;
         this.screenSpacePanning = false;
         this.minDistance = 20;
         this.maxDistance = 100;
@@ -17882,7 +17945,208 @@ class VoxelMapControls extends three_examples_jsm_controls_MapControls__WEBPACK_
         this.enableDamping = false;
         this.dampingFactor = 0.005;
         this.panSpeed = 0.5;
+        this.enabled = false;
     }
+    setAspectRatio(value) {
+        this.camera.aspect = value;
+        this.camera.updateProjectionMatrix();
+    }
+    getAnchorPosition() {
+        return this._getCameraLookIntersection(this.camera);
+    }
+    _getCameraLookIntersection(camera) {
+        this._raycaster.setFromCamera(new three__WEBPACK_IMPORTED_MODULE_5__.Vector2(0, 0), camera);
+        this._raycaster.ray.intersectPlane(this._groundPlane, this._intersection);
+        return this._intersection;
+    }
+}
+class BrickscapeHeroControls extends three_examples_jsm_controls_PointerLockControls_js__WEBPACK_IMPORTED_MODULE_6__.PointerLockControls {
+    static getInstance() {
+        var _a;
+        BrickscapeHeroControls.instance = (_a = BrickscapeHeroControls.instance) !== null && _a !== void 0 ? _a : new BrickscapeHeroControls();
+        return BrickscapeHeroControls.instance;
+    }
+    constructor() {
+        let camera = new three__WEBPACK_IMPORTED_MODULE_5__.PerspectiveCamera(60, 1, 0.001, 1000);
+        super(camera, _state__WEBPACK_IMPORTED_MODULE_0__.state.renderer.canvas);
+        this._moveForward = false;
+        this._moveBackward = false;
+        this._moveLeft = false;
+        this._moveRight = false;
+        this._canJump = false;
+        this._onObject = false;
+        this._maxElevation = 0;
+        this._heroHeight = 2;
+        this._walkVelocity = 30;
+        this._runVelocity = 60;
+        this._walkFov = 72;
+        this._runFov = 90;
+        this._jumpImpulse = 10;
+        this._fallingVelocity = 5;
+        this._currentFov = 80;
+        this._currentMovementVelocity = 0;
+        this._currentTangibility = 0;
+        this.enabled = false;
+        this._velocity = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3();
+        this._direction = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3();
+        document.addEventListener('keydown', this._onKeyDown.bind(this));
+        document.addEventListener('keyup', this._onKeyUp.bind(this));
+        _state__WEBPACK_IMPORTED_MODULE_0__.state.renderer.canvas.addEventListener('click', () => {
+            if (this.enabled) {
+                this.lock();
+            }
+        });
+        this.addEventListener('lock', () => {
+            console.log(`locked`);
+        });
+        this.addEventListener('unlock', () => {
+            console.log(`unlocked`);
+        });
+        this._jump = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.throttle)(this._jump.bind(this), 1000 / 5, { leading: true });
+        _state__WEBPACK_IMPORTED_MODULE_0__.state.scene.add(this.getObject());
+    }
+    reset() {
+        this.camera.position.y = _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight;
+    }
+    setAspectRatio(value) {
+        this.camera.aspect = value;
+        this.camera.updateProjectionMatrix();
+    }
+    getAnchorPosition() {
+        return this.camera.position;
+    }
+    _onKeyDown(event) {
+        if (this.enabled) {
+            switch (event.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    this._moveForward = true;
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    this._moveLeft = true;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    this._moveBackward = true;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    this._moveRight = true;
+                    break;
+                case 'Space':
+                    this._jump();
+                    break;
+                case 'ShiftLeft':
+                case 'AltLeft':
+                case 'ControlLeft':
+                case 'ShiftRight':
+                case 'AltRight':
+                case 'ControlRight':
+                    this._isRunning = true;
+                    break;
+            }
+        }
+    }
+    _jump() {
+        if (this._canJump === true) {
+            let position = this.camera.position;
+            let tangibility = _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x, position.y - this._heroHeight + 0.5, position.z);
+            console.log(tangibility);
+            this._velocity.y += (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(0, this._jumpImpulse, Math.pow(tangibility, 3));
+        }
+    }
+    _onKeyUp(event) {
+        if (this.enabled) {
+            switch (event.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    this._moveForward = false;
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    this._moveLeft = false;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    this._moveBackward = false;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    this._moveRight = false;
+                    break;
+                case 'ShiftLeft':
+                case 'AltLeft':
+                case 'ControlLeft':
+                case 'ShiftRight':
+                case 'AltRight':
+                case 'ControlRight':
+                    this._isRunning = false;
+                    break;
+            }
+        }
+    }
+    update() {
+        if (this.enabled) {
+            let delta = _state__WEBPACK_IMPORTED_MODULE_0__.state.timeDelta;
+            let object = this.getObject();
+            let position = object.position;
+            let maxElevation = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(_blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getElevationAtPosition(position.x, position.y, position.z, 0.5), 0, _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight);
+            this._currentTangibility = _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x, position.y - this._heroHeight, position.z);
+            let movementVelocity = this._isRunning ? this._runVelocity : this._walkVelocity;
+            this._currentMovementVelocity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._currentMovementVelocity, movementVelocity, 0.5);
+            let targetFov = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._walkFov, this._runFov, (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(this._currentMovementVelocity / this._runVelocity, 0, 1));
+            // console.log(currentTangibility)
+            let targetFallingVelocity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._fallingVelocity, 0, Math.pow(this._currentTangibility, 0.1));
+            this._currentFov = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._currentFov, targetFov, 0.025);
+            this._maxElevation = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._maxElevation, maxElevation, 0.15);
+            this._velocity.x -= this._velocity.x * 10.0 * delta;
+            this._velocity.z -= this._velocity.z * 10.0 * delta;
+            this._velocity.y -= 9.8 * targetFallingVelocity * delta; // 100.0 = mass
+            this._direction.z = Number(this._moveForward) - Number(this._moveBackward);
+            this._direction.x = Number(this._moveRight) - Number(this._moveLeft);
+            this._direction.normalize(); // this ensures consistent this._movements in all this._directions
+            this._velocity.z -= this._direction.z * this._currentMovementVelocity * delta;
+            this._velocity.x -= this._direction.x * this._currentMovementVelocity * delta;
+            this.moveRight(-this._velocity.x * delta);
+            this.moveForward(-this._velocity.z * delta);
+            object.position.y += (this._velocity.y * delta); // new behavior
+            this._canJump = this._currentTangibility > 0;
+            // z-reset
+            if (object.position.y < this._maxElevation + (this._heroHeight + 0.5)) {
+                this._velocity.y = 0;
+                object.position.y = this._maxElevation + (this._heroHeight + 0.5);
+                this._canJump = true;
+            }
+            this.camera.fov = this._currentFov;
+            this.camera.updateProjectionMatrix();
+        }
+        else {
+            this.unlock();
+        }
+    }
+}
+function getControlsOfType(type) {
+    switch (type) {
+        case EBrickscapeControlsType.Eagle: {
+            return BrickscapeEagleControls.getInstance();
+        }
+        case EBrickscapeControlsType.Hero: {
+            return BrickscapeHeroControls.getInstance();
+        }
+    }
+}
+function setActiveControls(type) {
+    if (_state__WEBPACK_IMPORTED_MODULE_0__.state.controls) {
+        _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.enabled = false;
+        _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.update();
+    }
+    (0,_utils__WEBPACK_IMPORTED_MODULE_2__.printd)(`setActiveControls: ${type}`);
+    let controls = _state__WEBPACK_IMPORTED_MODULE_0__.state.controls = getControlsOfType(type);
+    controls.reset();
+    _state__WEBPACK_IMPORTED_MODULE_0__.state.renderer.reset();
+    _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.enabled = true;
+    return _state__WEBPACK_IMPORTED_MODULE_0__.state.controls;
 }
 
 
@@ -17942,19 +18206,20 @@ const flaresTable = [
     }
 ];
 class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
-    constructor({ scene, camera, renderer }) {
+    constructor() {
         super();
         this.sun = null;
         this.ambient = null;
         this.fog = null;
-        this.daytime = 0.8;
-        this.dayspeed = 1 / 2048;
+        this.daytime = 0.7;
+        this.dayspeed = 1 / 60;
         this.sunRotationRadius = (_state__WEBPACK_IMPORTED_MODULE_1__.state.drawChunks * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) * 4;
         this.sunElevation = 2;
         this.minSunIntensity = -0.5;
         this.maxSunIntensity = 0.5;
         this.minAmbIntensity = 0.05;
-        this.maxAmbIntensity = 0.5;
+        this.maxAmbIntensity = 0.6;
+        let scene = _state__WEBPACK_IMPORTED_MODULE_1__.state.scene;
         this.fog = new three__WEBPACK_IMPORTED_MODULE_3__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_3__.Color(0x777777), 0.33);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             scene.fog = this.fog;
@@ -17963,7 +18228,7 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
         sun.position.set(0.5, 1, -0.5);
         this.add(sun);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
-            Environment.addFlares(sun, this);
+            Environment.addFlares(sun, this, 5, 2);
         }
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel == 0) {
             this.ambient = new three__WEBPACK_IMPORTED_MODULE_3__.AmbientLight(0xffffff, 0.2);
@@ -17978,14 +18243,14 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
             scene.backgroundIntensity = 1;
             scene.backgroundBlurriness = 1;
         });
-        this.update(0);
+        _state__WEBPACK_IMPORTED_MODULE_1__.state.scene.add(this);
+        this.update();
     }
-    update(frameDelta) {
+    update() {
         if (_state__WEBPACK_IMPORTED_MODULE_1__.state.map) {
             this.position.set(_state__WEBPACK_IMPORTED_MODULE_1__.state.map.activeChunk[0] * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize, 0, _state__WEBPACK_IMPORTED_MODULE_1__.state.map.activeChunk[1] * _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize);
         }
         let sunHeight = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.clamp)(Math.sin(this.daytime * Math.PI * 2) + 0.5, -1, 1);
-        let backgroundIntensity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.clamp)(sunHeight + 0.1, 0, 1);
         let angle = this.daytime * Math.PI * 2;
         let sunX = Math.cos(angle) * this.sunRotationRadius;
         let sunZ = Math.sin(angle) * this.sunRotationRadius;
@@ -17994,9 +18259,9 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             this.sun.flare.position.copy(this.sun.position);
         }
-        _state__WEBPACK_IMPORTED_MODULE_1__.state.scene.backgroundIntensity = backgroundIntensity;
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             let envMapIntensity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this.minAmbIntensity, this.maxAmbIntensity, (0,_utils__WEBPACK_IMPORTED_MODULE_2__.clamp)(sunHeight, 0, 1));
+            _state__WEBPACK_IMPORTED_MODULE_1__.state.scene.backgroundIntensity = envMapIntensity;
             _state__WEBPACK_IMPORTED_MODULE_1__.state.scene.traverse((object) => {
                 if (object.isMesh) {
                     object.material.envMapIntensity = envMapIntensity;
@@ -18005,16 +18270,17 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
         }
         else {
             let ambIntensity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this.minAmbIntensity, this.maxAmbIntensity, (0,_utils__WEBPACK_IMPORTED_MODULE_2__.clamp)(sunHeight, 0, 1));
+            _state__WEBPACK_IMPORTED_MODULE_1__.state.scene.backgroundIntensity = ambIntensity;
             this.ambient.intensity = ambIntensity;
         }
-        this.daytime += this.dayspeed * frameDelta;
+        this.daytime += this.dayspeed * _state__WEBPACK_IMPORTED_MODULE_1__.state.timeDelta;
     }
-    static addFlares(light, scene, count = 5) {
+    static addFlares(light, scene, count = 5, sizeScale = 1) {
         const lensflare = new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_4__.Lensflare();
         flaresTable.forEach((flareData, index) => {
             if (index < count) {
                 const lensFlareTexture = _loaders__WEBPACK_IMPORTED_MODULE_0__.textureLoader.load(flareData.texture);
-                lensflare.addElement(new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_4__.LensflareElement(lensFlareTexture, flareData.size, flareData.distance, new three__WEBPACK_IMPORTED_MODULE_3__.Color(0xffffff)));
+                lensflare.addElement(new three_examples_jsm_objects_LensFlare__WEBPACK_IMPORTED_MODULE_4__.LensflareElement(lensFlareTexture, (flareData.size * sizeScale), flareData.distance, new three__WEBPACK_IMPORTED_MODULE_3__.Color(0xffffff)));
                 // lensflare.position.copy(light.position);
                 console.log(lensflare);
             }
@@ -18120,10 +18386,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   createGui: () => (/* binding */ createGui),
 /* harmony export */   monitoringData: () => (/* binding */ monitoringData)
 /* harmony export */ });
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var tweakpane__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! tweakpane */ "./node_modules/tweakpane/dist/tweakpane.js");
-/* harmony import */ var tweakpane__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(tweakpane__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var tweakpane__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tweakpane */ "./node_modules/tweakpane/dist/tweakpane.js");
+/* harmony import */ var tweakpane__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(tweakpane__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _controls__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./controls */ "./src/controls.ts");
 
 
 const appInfo = `
@@ -18147,11 +18412,23 @@ const monitoringData = {
     totalTasks: '',
     chunksPoolSize: ''
 };
-function createGui({ scene, camera, renderer }) {
-    const controlPane = new tweakpane__WEBPACK_IMPORTED_MODULE_1__.Pane();
+function createGui() {
+    const controlPane = new tweakpane__WEBPACK_IMPORTED_MODULE_0__.Pane();
     const controlsFolder = controlPane.addFolder({
         title: 'Controls',
-        expanded: false
+        expanded: true
+    });
+    controlsFolder.addButton({
+        title: 'Eagle View',
+        label: ""
+    }).on('click', () => {
+        (0,_controls__WEBPACK_IMPORTED_MODULE_1__.setActiveControls)(_controls__WEBPACK_IMPORTED_MODULE_1__.EBrickscapeControlsType.Eagle);
+    });
+    controlsFolder.addButton({
+        title: 'Hero View',
+        label: "(in test)"
+    }).on('click', () => {
+        (0,_controls__WEBPACK_IMPORTED_MODULE_1__.setActiveControls)(_controls__WEBPACK_IMPORTED_MODULE_1__.EBrickscapeControlsType.Hero);
     });
     const monitorFolder = controlPane.addFolder({
         title: 'Monitoring',
@@ -18165,11 +18442,6 @@ function createGui({ scene, camera, renderer }) {
         multiline: true,
         lineCount: 16,
     });
-    const updateProjectionMatrix = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.debounce)(() => camera.updateProjectionMatrix(), 100);
-    controlsFolder.addInput(camera, 'fov', {
-        min: 30,
-        max: 179,
-    }).on('change', e => updateProjectionMatrix());
     for (let k in monitoringData) {
         monitorFolder.addMonitor(monitoringData, k);
     }
@@ -18209,8 +18481,7 @@ const rgbeLoader = new three_examples_jsm_loaders_RGBELoader__WEBPACK_IMPORTED_M
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   MapManager: () => (/* binding */ MapManager),
-/* harmony export */   getCameraLookIntersection: () => (/* binding */ getCameraLookIntersection)
+/* harmony export */   MapManager: () => (/* binding */ MapManager)
 /* harmony export */ });
 /* harmony import */ var three__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
@@ -18227,26 +18498,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// Define a plane representing the ground in the scene
-let _groundPlane = new three__WEBPACK_IMPORTED_MODULE_6__.Plane(new three__WEBPACK_IMPORTED_MODULE_6__.Vector3(0, 1, 0), 0);
-// Vector to store the intersection point of the ray and the ground plane
-let _intersection = new three__WEBPACK_IMPORTED_MODULE_6__.Vector3();
-// Create a raycaster for detecting intersections with the ground plane
-let _raycaster = new three__WEBPACK_IMPORTED_MODULE_6__.Raycaster();
 // Chunk update rate limit in milliseconds
 let _chunkUpdateRateLimit = (_state__WEBPACK_IMPORTED_MODULE_1__.FeatureLevel.Low + 1) * 5;
 // Chunk sync rate limit in milliseconds
 let _chunkSyncRateLimit = (_state__WEBPACK_IMPORTED_MODULE_1__.FeatureLevel.Low + 1) * 15;
-/**
- * Get the intersection point of the camera's look direction with the ground plane.
- * @param {Camera} camera - The camera object to use for raycasting.
- * @returns {Vector3} - The intersection point of the ray and the ground plane.
- */
-function getCameraLookIntersection(camera) {
-    _raycaster.setFromCamera(new three__WEBPACK_IMPORTED_MODULE_6__.Vector2(0, 0), camera);
-    _raycaster.ray.intersectPlane(_groundPlane, _intersection);
-    return _intersection;
-}
 /**
  * A custom Group class representing the Map Manager which handles loading and unloading of chunks.
  */
@@ -18255,26 +18510,25 @@ class MapManager extends three__WEBPACK_IMPORTED_MODULE_6__.Group {
      * Create a new Map Manager.
      * @param {Object} options - Options object containing the camera reference.
      */
-    constructor({ camera }) {
+    constructor() {
         super();
-        this.camera = null;
         this.activeChunk = null;
-        this.camera = camera;
         this.activeChunk = [null, null];
         this._activeChunks = [];
         // Debounced function to handle the change of active chunk
         this._onActiveChunkChanged = (0,lodash__WEBPACK_IMPORTED_MODULE_5__.throttle)(this._onActiveChunkChanged.bind(this), 1000 / _chunkUpdateRateLimit);
         // Throttled function to sync the chunks
         this._syncChunks = (0,lodash__WEBPACK_IMPORTED_MODULE_5__.throttle)(this._syncChunks.bind(this), 1000 / _chunkSyncRateLimit);
+        _state__WEBPACK_IMPORTED_MODULE_1__.state.scene.add(this);
     }
     /**
      * Update the Map Manager.
      * This function should be called in the update/render loop to update the manager.
      */
     update() {
-        let cameraLook = getCameraLookIntersection(this.camera);
-        let cx = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getNearestMultiple)(cameraLook.x, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) / _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
-        let cz = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getNearestMultiple)(cameraLook.z, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) / _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
+        let controlsAnchor = _state__WEBPACK_IMPORTED_MODULE_1__.state.controls.getAnchorPosition();
+        let cx = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getNearestMultiple)(controlsAnchor.x, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) / _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
+        let cz = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.getNearestMultiple)(controlsAnchor.z, _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize) / _state__WEBPACK_IMPORTED_MODULE_1__.state.chunkSize;
         if (cx !== this.activeChunk[0] || cz != this.activeChunk[1]) {
             this.activeChunk[0] = cx;
             this.activeChunk[1] = cz;
@@ -18405,16 +18659,18 @@ class RenderingHelper {
     constructor(params) {
         this.useComposer = false;
         const canvas = this.canvas = document.createElement('canvas');
-        document.body.appendChild(canvas);
         this._renderer = new three__WEBPACK_IMPORTED_MODULE_1__.WebGLRenderer({
             canvas,
             antialias: _state__WEBPACK_IMPORTED_MODULE_0__.featureLevel != _state__WEBPACK_IMPORTED_MODULE_0__.FeatureLevel.Low
         });
+        this.useComposer = params.useComposer === true;
+    }
+    initialize() {
+        document.body.appendChild(this.canvas);
         this._renderer.setPixelRatio(_state__WEBPACK_IMPORTED_MODULE_0__.featureLevel == _state__WEBPACK_IMPORTED_MODULE_0__.FeatureLevel.Low ? 1 : _pixelRatio);
         let scene = _state__WEBPACK_IMPORTED_MODULE_0__.state.scene;
-        let camera = _state__WEBPACK_IMPORTED_MODULE_0__.state.camera;
-        if (params.useComposer) {
-            this.useComposer = true;
+        let camera = _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.camera;
+        if (this.useComposer) {
             let composer = this._composer = new three_examples_jsm_postprocessing_EffectComposer_js__WEBPACK_IMPORTED_MODULE_2__.EffectComposer(this._renderer);
             let renderPass = new three_examples_jsm_postprocessing_RenderPass_js__WEBPACK_IMPORTED_MODULE_3__.RenderPass(scene, camera);
             const ssaoPass = new three_examples_jsm_postprocessing_SSAOPass_js__WEBPACK_IMPORTED_MODULE_4__.SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
@@ -18432,13 +18688,14 @@ class RenderingHelper {
             this._composer.render();
         }
         else {
-            this._renderer.render(_state__WEBPACK_IMPORTED_MODULE_0__.state.scene, _state__WEBPACK_IMPORTED_MODULE_0__.state.camera);
+            this._renderer.render(_state__WEBPACK_IMPORTED_MODULE_0__.state.scene, _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.camera);
         }
     }
+    reset() {
+        this._updateRenderSize();
+    }
     _updateRenderSize() {
-        let aspect = window.innerWidth / window.innerHeight;
-        _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.aspect = aspect;
-        _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.updateProjectionMatrix();
+        _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.setAspectRatio(window.innerWidth / window.innerHeight);
         this._renderer.setSize(window.innerWidth, window.innerHeight);
         if (this.useComposer) {
             this._composer.setSize(window.innerWidth, window.innerHeight);
@@ -18787,8 +19044,6 @@ function _patchMaterial(mat, hooks) {
     // Define the custom uniforms
     mat.uniforms = {
         uLightDirection: { value: new three__WEBPACK_IMPORTED_MODULE_2__.Vector3(0, 10, 2).normalize() },
-        uFar: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.far },
-        uNear: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.camera.near },
         uMaxInstances: { value: _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.maxBlocksPerChunk },
         uTilesSF0: { value: _tilesSF0 },
         uTilesSF1: { value: _tilesSF1 },
@@ -18798,15 +19053,13 @@ function _patchMaterial(mat, hooks) {
         uTime: { value: 0 },
         uResolution: { value: new three__WEBPACK_IMPORTED_MODULE_2__.Vector2() },
         uFogHeight: { value: _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight * 0.666 },
-        uWindSpeed: { value: 0.25 },
+        uWindSpeed: { value: 0.01 },
         uFogDisturbanceScale: { value: 150 }
     };
     // Assign the vertex shader and fragment shader through onBeforeCompile
     mat.onBeforeCompile = (shader) => {
         // Pass the custom uniforms to the shader
         shader.uniforms.uLightDirection = mat.uniforms.uLightDirection;
-        shader.uniforms.uFar = mat.uniforms.uFar;
-        shader.uniforms.uNear = mat.uniforms.uNear;
         shader.uniforms.uMaxInstances = mat.uniforms.uMaxInstances;
         shader.uniforms.uTilesSF0 = mat.uniforms.uTilesSF0;
         shader.uniforms.uTilesSF1 = mat.uniforms.uTilesSF1;
@@ -18884,8 +19137,6 @@ function _patchMaterial(mat, hooks) {
         shader.fragmentShader = shader.fragmentShader.replace(hooks[3], `
         uniform vec3 uColor;
         uniform vec3 uLightDirection;
-        uniform float uFar;
-        uniform float uNear;
         uniform float uMaxInstances;
 
         uniform sampler2D uTilesSF0;
@@ -19096,8 +19347,8 @@ function getBlockBaseMaterial() {
     // Return either VoxelBlockLamberMaterial or VoxelBlockStandardMaterial based on the feature level
     return _state__WEBPACK_IMPORTED_MODULE_0__.featureLevel === _state__WEBPACK_IMPORTED_MODULE_0__.FeatureLevel.Low ? new VoxelBlockStandardMaterial() : new VoxelBlockStandardMaterial();
 }
-function updateGlobalUniforms(frameDelta) {
-    _shaderTime = _shaderTime + (frameDelta / 1000);
+function updateGlobalUniforms() {
+    _shaderTime = _shaderTime + _state__WEBPACK_IMPORTED_MODULE_0__.state.timeDelta;
 }
 
 
@@ -19128,12 +19379,13 @@ var FeatureLevel;
 })(FeatureLevel || (FeatureLevel = {}));
 let featureLevel = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.isMobileDevice)() ? FeatureLevel.Low : FeatureLevel.Mid;
 const state = {
+    frameDelta: 1,
+    timeDelta: 0,
     seed: 454,
     chunkSize: featureLevel == FeatureLevel.Low ? 8 : 12,
     drawChunks: featureLevel == FeatureLevel.Low ? 2 : 3,
     blockShape: _blocks__WEBPACK_IMPORTED_MODULE_0__.BlockShape.Cube,
     worldHeight: 24,
-    camera: null,
     scene: null,
     renderer: null,
     controls: null,
@@ -81225,6 +81477,180 @@ class OrbitControls extends three__WEBPACK_IMPORTED_MODULE_0__.EventDispatcher {
 
 /***/ }),
 
+/***/ "./node_modules/three/examples/jsm/controls/PointerLockControls.js":
+/*!*************************************************************************!*\
+  !*** ./node_modules/three/examples/jsm/controls/PointerLockControls.js ***!
+  \*************************************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   PointerLockControls: () => (/* binding */ PointerLockControls)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+
+
+const _euler = new three__WEBPACK_IMPORTED_MODULE_0__.Euler( 0, 0, 0, 'YXZ' );
+const _vector = new three__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+
+const _changeEvent = { type: 'change' };
+const _lockEvent = { type: 'lock' };
+const _unlockEvent = { type: 'unlock' };
+
+const _PI_2 = Math.PI / 2;
+
+class PointerLockControls extends three__WEBPACK_IMPORTED_MODULE_0__.EventDispatcher {
+
+	constructor( camera, domElement ) {
+
+		super();
+
+		this.camera = camera;
+		this.domElement = domElement;
+
+		this.isLocked = false;
+
+		// Set to constrain the pitch of the camera
+		// Range is 0 to Math.PI radians
+		this.minPolarAngle = 0; // radians
+		this.maxPolarAngle = Math.PI; // radians
+
+		this.pointerSpeed = 1.0;
+
+		this._onMouseMove = onMouseMove.bind( this );
+		this._onPointerlockChange = onPointerlockChange.bind( this );
+		this._onPointerlockError = onPointerlockError.bind( this );
+
+		this.connect();
+
+	}
+
+	connect() {
+
+		this.domElement.ownerDocument.addEventListener( 'mousemove', this._onMouseMove );
+		this.domElement.ownerDocument.addEventListener( 'pointerlockchange', this._onPointerlockChange );
+		this.domElement.ownerDocument.addEventListener( 'pointerlockerror', this._onPointerlockError );
+
+	}
+
+	disconnect() {
+
+		this.domElement.ownerDocument.removeEventListener( 'mousemove', this._onMouseMove );
+		this.domElement.ownerDocument.removeEventListener( 'pointerlockchange', this._onPointerlockChange );
+		this.domElement.ownerDocument.removeEventListener( 'pointerlockerror', this._onPointerlockError );
+
+	}
+
+	dispose() {
+
+		this.disconnect();
+
+	}
+
+	getObject() { // retaining this method for backward compatibility
+
+		return this.camera;
+
+	}
+
+	getDirection( v ) {
+
+		return v.set( 0, 0, - 1 ).applyQuaternion( this.camera.quaternion );
+
+	}
+
+	moveForward( distance ) {
+
+		// move forward parallel to the xz-plane
+		// assumes camera.up is y-up
+
+		const camera = this.camera;
+
+		_vector.setFromMatrixColumn( camera.matrix, 0 );
+
+		_vector.crossVectors( camera.up, _vector );
+
+		camera.position.addScaledVector( _vector, distance );
+
+	}
+
+	moveRight( distance ) {
+
+		const camera = this.camera;
+
+		_vector.setFromMatrixColumn( camera.matrix, 0 );
+
+		camera.position.addScaledVector( _vector, distance );
+
+	}
+
+	lock() {
+
+		this.domElement.requestPointerLock();
+
+	}
+
+	unlock() {
+
+		this.domElement.ownerDocument.exitPointerLock();
+
+	}
+
+}
+
+// event listeners
+
+function onMouseMove( event ) {
+
+	if ( this.isLocked === false ) return;
+
+	const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+	const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+	const camera = this.camera;
+	_euler.setFromQuaternion( camera.quaternion );
+
+	_euler.y -= movementX * 0.002 * this.pointerSpeed;
+	_euler.x -= movementY * 0.002 * this.pointerSpeed;
+
+	_euler.x = Math.max( _PI_2 - this.maxPolarAngle, Math.min( _PI_2 - this.minPolarAngle, _euler.x ) );
+
+	camera.quaternion.setFromEuler( _euler );
+
+	this.dispatchEvent( _changeEvent );
+
+}
+
+function onPointerlockChange() {
+
+	if ( this.domElement.ownerDocument.pointerLockElement === this.domElement ) {
+
+		this.dispatchEvent( _lockEvent );
+
+		this.isLocked = true;
+
+	} else {
+
+		this.dispatchEvent( _unlockEvent );
+
+		this.isLocked = false;
+
+	}
+
+}
+
+function onPointerlockError() {
+
+	console.error( 'THREE.PointerLockControls: Unable to use Pointer Lock API' );
+
+}
+
+
+
+
+/***/ }),
+
 /***/ "./node_modules/three/examples/jsm/loaders/RGBELoader.js":
 /*!***************************************************************!*\
   !*** ./node_modules/three/examples/jsm/loaders/RGBELoader.js ***!
@@ -84243,18 +84669,15 @@ var __webpack_exports__ = {};
   !*** ./src/index.ts ***!
   \**********************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _controls__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./controls */ "./src/controls.ts");
 /* harmony import */ var _map__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map */ "./src/map.ts");
 /* harmony import */ var _gui__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gui */ "./src/gui.ts");
 /* harmony import */ var _state__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./state */ "./src/state.ts");
 /* harmony import */ var _environment__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./environment */ "./src/environment.ts");
-/* harmony import */ var _generator__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./generator */ "./src/generator.ts");
-/* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
-/* harmony import */ var _world__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./world */ "./src/world.ts");
-/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./blocks */ "./src/blocks.ts");
-/* harmony import */ var _shaders__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./shaders */ "./src/shaders.ts");
-/* harmony import */ var _renderer__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./renderer */ "./src/renderer.ts");
+/* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
+/* harmony import */ var _shaders__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./shaders */ "./src/shaders.ts");
+/* harmony import */ var _renderer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./renderer */ "./src/renderer.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -84273,59 +84696,37 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
-
-
-
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        _state__WEBPACK_IMPORTED_MODULE_3__.state.generator = _generator__WEBPACK_IMPORTED_MODULE_5__.generationHelper;
-        _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker = _tasker__WEBPACK_IMPORTED_MODULE_6__.tasker;
-        _state__WEBPACK_IMPORTED_MODULE_3__.state.world = _world__WEBPACK_IMPORTED_MODULE_7__.worldManager;
-        _state__WEBPACK_IMPORTED_MODULE_3__.state.blockManager = _blocks__WEBPACK_IMPORTED_MODULE_8__.blockManager;
-        const fov = 80;
-        const near = 0.1;
-        const far = 2048;
-        let aspect = 2; // the canvas default
-        const camera = _state__WEBPACK_IMPORTED_MODULE_3__.state.camera = new three__WEBPACK_IMPORTED_MODULE_11__.PerspectiveCamera(fov, aspect, near, far);
-        const scene = _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_11__.Scene();
-        const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new _renderer__WEBPACK_IMPORTED_MODULE_10__.RenderingHelper({
+        const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new _renderer__WEBPACK_IMPORTED_MODULE_7__.RenderingHelper({
             useComposer: false
         });
-        const environment = new _environment__WEBPACK_IMPORTED_MODULE_4__.Environment({
-            scene,
-            camera,
-            renderer
-        });
-        scene.add(environment);
-        // CONTROLS
-        let controls = _state__WEBPACK_IMPORTED_MODULE_3__.state.controls = new _controls__WEBPACK_IMPORTED_MODULE_0__.VoxelMapControls(camera, renderer.canvas);
-        // MAP
-        const map = _state__WEBPACK_IMPORTED_MODULE_3__.state.map = new _map__WEBPACK_IMPORTED_MODULE_1__.MapManager({
-            camera
-        });
-        scene.add(map);
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_8__.Scene();
+        const controls = (0,_controls__WEBPACK_IMPORTED_MODULE_0__.setActiveControls)(_controls__WEBPACK_IMPORTED_MODULE_0__.EBrickscapeControlsType.Eagle);
+        const environment = new _environment__WEBPACK_IMPORTED_MODULE_4__.Environment();
+        const map = _state__WEBPACK_IMPORTED_MODULE_3__.state.map = new _map__WEBPACK_IMPORTED_MODULE_1__.MapManager();
+        renderer.initialize();
         // RENDER LOOP
-        let prevFrameTime = +new Date();
+        let prevFrameTime = performance.now();
         function render() {
-            let now = +new Date();
-            let frameTimeDelta = now - prevFrameTime;
-            let frameDelta = frameTimeDelta / (1000 / 60);
             requestAnimationFrame(render);
-            (0,_shaders__WEBPACK_IMPORTED_MODULE_9__.updateGlobalUniforms)(frameDelta);
-            environment.update(frameDelta);
+            let now = performance.now();
+            let timeDelta = (now - prevFrameTime) / 1000;
+            let frameDelta = (timeDelta / (1 / 60));
+            _state__WEBPACK_IMPORTED_MODULE_3__.state.frameDelta = frameDelta;
+            _state__WEBPACK_IMPORTED_MODULE_3__.state.timeDelta = timeDelta;
+            prevFrameTime = now;
+            (0,_shaders__WEBPACK_IMPORTED_MODULE_6__.updateGlobalUniforms)();
+            environment.update();
             map.update();
             controls.update();
             renderer.render();
-            prevFrameTime = now;
         }
-        (0,_gui__WEBPACK_IMPORTED_MODULE_2__.createGui)({
-            scene,
-            camera,
-            renderer
-        });
-        window.state = _state__WEBPACK_IMPORTED_MODULE_3__.state;
-        _state__WEBPACK_IMPORTED_MODULE_3__.state.tasker.start();
+        (0,_gui__WEBPACK_IMPORTED_MODULE_2__.createGui)();
+        _tasker__WEBPACK_IMPORTED_MODULE_5__.tasker.start();
         requestAnimationFrame(render);
+        // debug
+        window.state = _state__WEBPACK_IMPORTED_MODULE_3__.state;
     });
 }
 main();
