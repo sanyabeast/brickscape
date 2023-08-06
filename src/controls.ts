@@ -3,7 +3,7 @@ import { MapControls } from 'three/examples/jsm/controls/MapControls';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { state } from './state';
 import { blockManager } from './blocks';
-import { lerp, printd } from './utils';
+import { lerp, printd, slide } from './utils';
 import { clamp, throttle } from 'lodash';
 
 export enum EBrickscapeControlsType {
@@ -83,7 +83,7 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
     _velocity: Vector3
     _direction: Vector3
     _maxElevation: number = 0
-    _heroHeight: number = 2
+    _eyesElevation: number = 2
     _walkVelocity: number = 30
     _runVelocity: number = 60
     _walkFov = 72
@@ -96,15 +96,18 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
     _currentFov = 80
     _currentMovementVelocity = 0
 
-    _currentTangibility = 0
 
     enabled: boolean = false
     override camera: PerspectiveCamera
+
+    _bodyBlocksTangibility: number[]
 
     constructor() {
         let camera = new PerspectiveCamera(60, 1, 0.001, 1000)
 
         super(camera, state.renderer.canvas)
+
+        this._bodyBlocksTangibility = [0, 0, 0, 0, 0]
         this._velocity = new Vector3()
         this._direction = new Vector3()
 
@@ -172,10 +175,7 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
     }
     _jump() {
         if (this._canJump === true) {
-            let position = this.camera.position
-            let tangibility = blockManager.getTangibilityAtPosition(position.x, position.y - this._heroHeight + 0.5, position.z)
-            console.log(tangibility)
-            this._velocity.y += lerp(0, this._jumpImpulse, Math.pow(tangibility, 3));
+            this._velocity.y += lerp(0, this._jumpImpulse, Math.pow(this._footBlocksTangibilityWeighted, 2));
         }
     }
     _onKeyUp(event) {
@@ -211,32 +211,49 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
             }
         }
     }
+    _updateBodyBlocksTangibility() {
+        let position = this.camera.position
+        this._bodyBlocksTangibility = [
+            blockManager.getTangibilityAtPosition(position.x, position.y - 2, position.z),
+            blockManager.getTangibilityAtPosition(position.x, position.y - 1, position.z),
+            blockManager.getTangibilityAtPosition(position.x, position.y + 0, position.z),
+            blockManager.getTangibilityAtPosition(position.x, position.y + 1, position.z),
+            blockManager.getTangibilityAtPosition(position.x, position.y + 2, position.z),
+        ]
+
+    }
+    get _footBlocksTangibility(): number {
+        return this._bodyBlocksTangibility[0]
+    }
+    get _footBlocksTangibilityWeighted(): number {
+        let w = this._bodyBlocksTangibility[0] - (this._bodyBlocksTangibility[1] * 0.5) - (this._bodyBlocksTangibility[2] * 0.25)
+        return w
+    }
+    get _aboveHeadBlockTangibility(): number {
+        return this._bodyBlocksTangibility[4]
+    }
     update() {
 
         if (this.enabled) {
+            this._updateBodyBlocksTangibility()
             let delta = state.timeDelta
             let object = this.getObject()
             let position = object.position
             let maxElevation = clamp(blockManager.getElevationAtPosition(position.x, position.y, position.z, 0.5), 0, state.worldHeight)
 
-            this._currentTangibility = blockManager.getTangibilityAtPosition(position.x, position.y - this._heroHeight, position.z)
 
-            let movementVelocity = this._isRunning ? this._runVelocity : this._walkVelocity
-
-            this._currentMovementVelocity = lerp(this._currentMovementVelocity, movementVelocity, 0.5);
-            let targetFov = lerp(this._walkFov, this._runFov, clamp(this._currentMovementVelocity / this._runVelocity, 0, 1))
-
-
+            let targetWalkVelocity = this._isRunning ? this._runVelocity : this._walkVelocity
             // console.log(currentTangibility)
-            let targetFallingVelocity = lerp(this._fallingVelocity, 0, Math.pow(this._currentTangibility, 0.1))
+            let targetFallVelocity = lerp(this._fallingVelocity, 0, Math.pow(this._footBlocksTangibilityWeighted, 0.1))
 
-            this._currentFov = lerp(this._currentFov, targetFov, 0.025)
-            this._maxElevation = lerp(this._maxElevation, maxElevation, 0.15);
+
+            this._currentMovementVelocity = slide(this._currentMovementVelocity, targetWalkVelocity, 100 * delta);
+            this._maxElevation = slide(this._maxElevation, maxElevation, 10 * delta);
 
             this._velocity.x -= this._velocity.x * 10.0 * delta;
             this._velocity.z -= this._velocity.z * 10.0 * delta;
 
-            this._velocity.y -= 9.8 * targetFallingVelocity * delta; // 100.0 = mass
+            this._velocity.y -= 9.8 * targetFallVelocity * delta; // 100.0 = mass
 
             this._direction.z = Number(this._moveForward) - Number(this._moveBackward);
             this._direction.x = Number(this._moveRight) - Number(this._moveLeft);
@@ -249,15 +266,19 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
             this.moveForward(- this._velocity.z * delta);
             object.position.y += (this._velocity.y * delta); // new behavior
 
-            this._canJump = this._currentTangibility > 0
+            this._canJump = this._footBlocksTangibilityWeighted > 0
 
             // z-reset
-            if (object.position.y < this._maxElevation + (this._heroHeight + 0.5)) {
+            if (object.position.y < this._maxElevation + 2) {
                 this._velocity.y = 0;
-                object.position.y = this._maxElevation + (this._heroHeight + 0.5);
+                object.position.y = this._maxElevation + 2;
                 this._canJump = true;
             }
 
+
+            /* fov */
+            let targetFov = lerp(this._walkFov, this._runFov, clamp(this._currentMovementVelocity / this._runVelocity, 0, 1))
+            this._currentFov = slide(this._currentFov, targetFov, 1)
             this.camera.fov = this._currentFov
             this.camera.updateProjectionMatrix()
 

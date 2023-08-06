@@ -19,7 +19,7 @@ async function main() {
     });
 
     state.scene = new Scene();
-    const controls = setActiveControls(EBrickscapeControlsType.Eagle)
+    const controls = setActiveControls(EBrickscapeControlsType.Hero)
     const environment = new Environment()
     const map = state.map = new MapManager()
 

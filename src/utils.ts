@@ -155,3 +155,10 @@ export function getPixelBrightness2(imageElement, x, y) {
 
 
 }
+
+export function slide(from: number, to: number, delta: number): number {
+    delta = from <= to ? delta : -delta
+    return clamp(from + delta, from <= to ? from : to, from <= to ? to : from)
+}
+
+(window as any).slide = slide
