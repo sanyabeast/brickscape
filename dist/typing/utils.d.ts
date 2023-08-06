@@ -12,3 +12,4 @@ export declare function isMobileDevice(): boolean;
 export declare function waitForCallback(callback: (resolve: (value: unknown) => void) => void): Promise<unknown>;
 export declare function getPixelBrightness(imageElement: any, x: any, y: any): number;
 export declare function getPixelBrightness2(imageElement: any, x: any, y: any): number;
+export declare function slide(from: number, to: number, delta: number): number;

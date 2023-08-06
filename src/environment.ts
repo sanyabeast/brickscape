@@ -65,7 +65,7 @@ export class Environment extends Group {
 
         let scene = state.scene
 
-        this.fog = new FogExp2(new Color(0x777777), 0.33)
+        this.fog = new FogExp2(new Color(0x777777), 0.2)
 
         if (featureLevel > 0) {
             scene.fog = this.fog

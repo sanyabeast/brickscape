@@ -17568,6 +17568,10 @@ class BlockManager {
         return r;
     }
     getTangibilityAtPosition(x, y, z) {
+        if (y < 0)
+            return 1;
+        if (y > _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight)
+            return 0;
         x = Math.floor(x);
         y = Math.floor(y);
         z = Math.floor(z);
@@ -17936,12 +17940,13 @@ class BrickscapeEagleControls extends three_examples_jsm_controls_MapControls__W
         this._raycaster = new three__WEBPACK_IMPORTED_MODULE_5__.Raycaster();
         this._nearClip = 0.1;
         this._farClip = 1000;
+        this.infoWidget = "eagle";
         this.camera = camera;
         this.screenSpacePanning = false;
         this.minDistance = 20;
         this.maxDistance = 100;
         this.maxPolarAngle = (Math.PI / 2.5);
-        this.maxPolarAngle = (Math.PI);
+        // this.maxPolarAngle = (Math.PI);
         this.enableDamping = false;
         this.dampingFactor = 0.005;
         this.panSpeed = 0.5;
@@ -17953,6 +17958,13 @@ class BrickscapeEagleControls extends three_examples_jsm_controls_MapControls__W
     }
     getAnchorPosition() {
         return this._getCameraLookIntersection(this.camera);
+    }
+    setAnchorPosition(pos) {
+        this.target.copy(pos);
+        this.object.position.set(pos.x, _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight, pos.z - _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight);
+        this.object.position.y = _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight;
+        console.log(this);
+        // throw new Error('Method not implemented.');
     }
     _getCameraLookIntersection(camera) {
         this._raycaster.setFromCamera(new three__WEBPACK_IMPORTED_MODULE_5__.Vector2(0, 0), camera);
@@ -17969,24 +17981,25 @@ class BrickscapeHeroControls extends three_examples_jsm_controls_PointerLockCont
     constructor() {
         let camera = new three__WEBPACK_IMPORTED_MODULE_5__.PerspectiveCamera(60, 1, 0.001, 1000);
         super(camera, _state__WEBPACK_IMPORTED_MODULE_0__.state.renderer.canvas);
+        this.infoWidget = "hero";
         this._moveForward = false;
         this._moveBackward = false;
         this._moveLeft = false;
         this._moveRight = false;
         this._canJump = false;
         this._onObject = false;
-        this._maxElevation = 0;
         this._heroHeight = 2;
+        this._eyesElevation = 2;
         this._walkVelocity = 30;
         this._runVelocity = 60;
         this._walkFov = 72;
         this._runFov = 90;
-        this._jumpImpulse = 10;
-        this._fallingVelocity = 5;
+        this._jumpImpulse = 16;
+        this._fallingVelocity = 6;
         this._currentFov = 80;
         this._currentMovementVelocity = 0;
-        this._currentTangibility = 0;
         this.enabled = false;
+        this._bodyBlocksTangibility = [0, 0, 0, 0, 0];
         this._velocity = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3();
         this._direction = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3();
         document.addEventListener('keydown', this._onKeyDown.bind(this));
@@ -18014,6 +18027,10 @@ class BrickscapeHeroControls extends three_examples_jsm_controls_PointerLockCont
     }
     getAnchorPosition() {
         return this.camera.position;
+    }
+    setAnchorPosition(pos) {
+        this.camera.position.copy(pos);
+        this.camera.position.y = _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight;
     }
     _onKeyDown(event) {
         if (this.enabled) {
@@ -18050,10 +18067,7 @@ class BrickscapeHeroControls extends three_examples_jsm_controls_PointerLockCont
     }
     _jump() {
         if (this._canJump === true) {
-            let position = this.camera.position;
-            let tangibility = _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x, position.y - this._heroHeight + 0.5, position.z);
-            console.log(tangibility);
-            this._velocity.y += (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(0, this._jumpImpulse, Math.pow(tangibility, 3));
+            this._velocity.y += (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(0, this._jumpImpulse, Math.pow(this._footBlocksTangibilityWeighted, 2));
         }
     }
     _onKeyUp(event) {
@@ -18086,23 +18100,56 @@ class BrickscapeHeroControls extends three_examples_jsm_controls_PointerLockCont
             }
         }
     }
+    _updateLocalBlocksData() {
+        let position = this.camera.position;
+        this._bodyBlocksTangibility = [
+            _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x + 0.5, position.y - 2, position.z + 0.5),
+            _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x + 0.5, position.y - 1, position.z + 0.5),
+            _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x + 0.5, position.y + 0, position.z + 0.5),
+            _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x + 0.5, position.y + 1, position.z + 0.5),
+        ];
+    }
+    get _footBlocksTangibility() {
+        return this._bodyBlocksTangibility[0];
+    }
+    get _footBlocksTangibilityWeighted() {
+        let w = this._bodyBlocksTangibility[0] * 1 -
+            this._bodyBlocksTangibility[1] * 0.5;
+        return (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(w, 0, 1);
+    }
+    get _bubbleForce() {
+        return (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(Math.pow((this._bodyBlocksTangibility[0] +
+            this._bodyBlocksTangibility[1] * 2) * 4, 4), 0, _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight * 2);
+    }
+    get _aboveHeadBlockTangibility() {
+        return this._bodyBlocksTangibility[3];
+    }
     update() {
         if (this.enabled) {
+            this._updateLocalBlocksData();
             let delta = _state__WEBPACK_IMPORTED_MODULE_0__.state.timeDelta;
             let object = this.getObject();
             let position = object.position;
-            let maxElevation = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(_blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getElevationAtPosition(position.x, position.y, position.z, 0.5), 0, _state__WEBPACK_IMPORTED_MODULE_0__.state.worldHeight);
-            this._currentTangibility = _blocks__WEBPACK_IMPORTED_MODULE_1__.blockManager.getTangibilityAtPosition(position.x, position.y - this._heroHeight, position.z);
-            let movementVelocity = this._isRunning ? this._runVelocity : this._walkVelocity;
-            this._currentMovementVelocity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._currentMovementVelocity, movementVelocity, 0.5);
-            let targetFov = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._walkFov, this._runFov, (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(this._currentMovementVelocity / this._runVelocity, 0, 1));
+            let targetWalkVelocity = this._isRunning ? this._runVelocity : this._walkVelocity;
             // console.log(currentTangibility)
-            let targetFallingVelocity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._fallingVelocity, 0, Math.pow(this._currentTangibility, 0.1));
-            this._currentFov = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._currentFov, targetFov, 0.025);
-            this._maxElevation = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._maxElevation, maxElevation, 0.15);
+            let targetFallVelocity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._fallingVelocity, 0, Math.pow(this._footBlocksTangibilityWeighted, 0.1));
+            // let targetFallVelocity = lerp(this._fallingVelocity, 0, Math.pow(this._footBlocksTangibilityWeighted, 0.1))
+            // console.log(this._footBlocksTangibilityWeighted)
+            this._currentMovementVelocity = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.slide)(this._currentMovementVelocity, targetWalkVelocity, 100 * delta);
             this._velocity.x -= this._velocity.x * 10.0 * delta;
             this._velocity.z -= this._velocity.z * 10.0 * delta;
-            this._velocity.y -= 9.8 * targetFallingVelocity * delta; // 100.0 = mass
+            // console.log(this._bubbleForce, this._currentMovementVelocity, targetFallVelocity, targetWalkVelocity)
+            if (this._bubbleForce > 0) {
+                this._velocity.y += 9.8 * targetFallVelocity * delta * this._bubbleForce; // 100.0 = mass
+                this._velocity.y = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(this._velocity.y, 0, this._velocity.y);
+            }
+            else {
+                this._velocity.y -= 9.8 * targetFallVelocity * delta * (1 - this._bubbleForce); // 100.0 = mass
+                this._velocity.y = (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(this._velocity.y, this._velocity.y, 0);
+            }
+            if (isNaN(this._velocity.y)) {
+                debugger;
+            }
             this._direction.z = Number(this._moveForward) - Number(this._moveBackward);
             this._direction.x = Number(this._moveRight) - Number(this._moveLeft);
             this._direction.normalize(); // this ensures consistent this._movements in all this._directions
@@ -18111,13 +18158,16 @@ class BrickscapeHeroControls extends three_examples_jsm_controls_PointerLockCont
             this.moveRight(-this._velocity.x * delta);
             this.moveForward(-this._velocity.z * delta);
             object.position.y += (this._velocity.y * delta); // new behavior
-            this._canJump = this._currentTangibility > 0;
+            this._canJump = this._footBlocksTangibilityWeighted > 0;
             // z-reset
-            if (object.position.y < this._maxElevation + (this._heroHeight + 0.5)) {
+            if (object.position.y < 0 + this._heroHeight) {
                 this._velocity.y = 0;
-                object.position.y = this._maxElevation + (this._heroHeight + 0.5);
+                object.position.y = 0 + 2;
                 this._canJump = true;
             }
+            /* fov */
+            let targetFov = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.lerp)(this._walkFov, this._runFov, (0,lodash__WEBPACK_IMPORTED_MODULE_3__.clamp)(this._currentMovementVelocity / this._runVelocity, 0, 1));
+            this._currentFov = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.slide)(this._currentFov, targetFov, 1);
             this.camera.fov = this._currentFov;
             this.camera.updateProjectionMatrix();
         }
@@ -18137,16 +18187,19 @@ function getControlsOfType(type) {
     }
 }
 function setActiveControls(type) {
+    let prevAnchorPosition = new three__WEBPACK_IMPORTED_MODULE_5__.Vector3(0, 0, 0);
     if (_state__WEBPACK_IMPORTED_MODULE_0__.state.controls) {
+        prevAnchorPosition = _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.getAnchorPosition();
         _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.enabled = false;
         _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.update();
     }
     (0,_utils__WEBPACK_IMPORTED_MODULE_2__.printd)(`setActiveControls: ${type}`);
     let controls = _state__WEBPACK_IMPORTED_MODULE_0__.state.controls = getControlsOfType(type);
-    controls.reset();
+    controls.setAnchorPosition(prevAnchorPosition);
     _state__WEBPACK_IMPORTED_MODULE_0__.state.renderer.reset();
+    document.querySelectorAll('.help-box').forEach((el) => { el.style.visibility = "hidden"; });
+    document.querySelector(`.help-box.${controls.infoWidget}`).style.visibility = 'visible';
     _state__WEBPACK_IMPORTED_MODULE_0__.state.controls.enabled = true;
-    return _state__WEBPACK_IMPORTED_MODULE_0__.state.controls;
 }
 
 
@@ -18220,7 +18273,7 @@ class Environment extends three__WEBPACK_IMPORTED_MODULE_3__.Group {
         this.minAmbIntensity = 0.05;
         this.maxAmbIntensity = 0.6;
         let scene = _state__WEBPACK_IMPORTED_MODULE_1__.state.scene;
-        this.fog = new three__WEBPACK_IMPORTED_MODULE_3__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_3__.Color(0x777777), 0.33);
+        this.fog = new three__WEBPACK_IMPORTED_MODULE_3__.FogExp2(new three__WEBPACK_IMPORTED_MODULE_3__.Color(0x777777), 0.2);
         if (_state__WEBPACK_IMPORTED_MODULE_1__.featureLevel > 0) {
             scene.fog = this.fog;
         }
@@ -18426,7 +18479,7 @@ function createGui() {
     });
     controlsFolder.addButton({
         title: 'Hero View',
-        label: "(in test)"
+        label: "(Beta)"
     }).on('click', () => {
         (0,_controls__WEBPACK_IMPORTED_MODULE_1__.setActiveControls)(_controls__WEBPACK_IMPORTED_MODULE_1__.EBrickscapeControlsType.Hero);
     });
@@ -19669,6 +19722,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   lerp: () => (/* binding */ lerp),
 /* harmony export */   logd: () => (/* binding */ logd),
 /* harmony export */   printd: () => (/* binding */ printd),
+/* harmony export */   slide: () => (/* binding */ slide),
 /* harmony export */   waitForCallback: () => (/* binding */ waitForCallback)
 /* harmony export */ });
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -19786,6 +19840,11 @@ function getPixelBrightness2(imageElement, x, y) {
     let brightness = (brightness0 + brightness1 + brightness2 + brightness2) / 4;
     return brightness;
 }
+function slide(from, to, delta) {
+    delta = from <= to ? delta : -delta;
+    return clamp(from + delta, from <= to ? from : to, from <= to ? to : from);
+}
+window.slide = slide;
 
 
 /***/ }),
@@ -84669,7 +84728,7 @@ var __webpack_exports__ = {};
   !*** ./src/index.ts ***!
   \**********************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _controls__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./controls */ "./src/controls.ts");
 /* harmony import */ var _map__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map */ "./src/map.ts");
 /* harmony import */ var _gui__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gui */ "./src/gui.ts");
@@ -84678,6 +84737,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _tasker__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./tasker */ "./src/tasker.ts");
 /* harmony import */ var _shaders__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./shaders */ "./src/shaders.ts");
 /* harmony import */ var _renderer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./renderer */ "./src/renderer.ts");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -84696,31 +84756,40 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
+
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         const renderer = _state__WEBPACK_IMPORTED_MODULE_3__.state.renderer = new _renderer__WEBPACK_IMPORTED_MODULE_7__.RenderingHelper({
             useComposer: false
         });
-        _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_8__.Scene();
-        const controls = (0,_controls__WEBPACK_IMPORTED_MODULE_0__.setActiveControls)(_controls__WEBPACK_IMPORTED_MODULE_0__.EBrickscapeControlsType.Eagle);
+        let paused = false;
+        let prevFrameTime = performance.now();
+        document.addEventListener('visibilitychange', () => {
+            paused = document.visibilityState != 'visible';
+            prevFrameTime = performance.now();
+            (0,_utils__WEBPACK_IMPORTED_MODULE_8__.printd)(`paused: ${paused}`);
+        });
+        _state__WEBPACK_IMPORTED_MODULE_3__.state.scene = new three__WEBPACK_IMPORTED_MODULE_9__.Scene();
+        (0,_controls__WEBPACK_IMPORTED_MODULE_0__.setActiveControls)(_controls__WEBPACK_IMPORTED_MODULE_0__.EBrickscapeControlsType.Eagle);
         const environment = new _environment__WEBPACK_IMPORTED_MODULE_4__.Environment();
         const map = _state__WEBPACK_IMPORTED_MODULE_3__.state.map = new _map__WEBPACK_IMPORTED_MODULE_1__.MapManager();
         renderer.initialize();
         // RENDER LOOP
-        let prevFrameTime = performance.now();
         function render() {
             requestAnimationFrame(render);
-            let now = performance.now();
-            let timeDelta = (now - prevFrameTime) / 1000;
-            let frameDelta = (timeDelta / (1 / 60));
-            _state__WEBPACK_IMPORTED_MODULE_3__.state.frameDelta = frameDelta;
-            _state__WEBPACK_IMPORTED_MODULE_3__.state.timeDelta = timeDelta;
-            prevFrameTime = now;
-            (0,_shaders__WEBPACK_IMPORTED_MODULE_6__.updateGlobalUniforms)();
-            environment.update();
-            map.update();
-            controls.update();
-            renderer.render();
+            if (!paused) {
+                let now = performance.now();
+                let timeDelta = (now - prevFrameTime) / 1000;
+                let frameDelta = (timeDelta / (1 / 60));
+                _state__WEBPACK_IMPORTED_MODULE_3__.state.frameDelta = frameDelta;
+                _state__WEBPACK_IMPORTED_MODULE_3__.state.timeDelta = timeDelta;
+                prevFrameTime = now;
+                (0,_shaders__WEBPACK_IMPORTED_MODULE_6__.updateGlobalUniforms)();
+                environment.update();
+                map.update();
+                _state__WEBPACK_IMPORTED_MODULE_3__.state.controls.update();
+                renderer.render();
+            }
         }
         (0,_gui__WEBPACK_IMPORTED_MODULE_2__.createGui)();
         _tasker__WEBPACK_IMPORTED_MODULE_5__.tasker.start();

@@ -10,7 +10,7 @@ import { worldManager } from './world';
 import { blockManager } from './blocks';
 import { updateGlobalUniforms } from './shaders';
 import { RenderingHelper } from './renderer';
-import { stat } from 'fs';
+import { printd } from './utils';
 
 
 async function main() {
@@ -18,30 +18,41 @@ async function main() {
         useComposer: false
     });
 
+    let paused = false
+    let prevFrameTime = performance.now();
+
+    document.addEventListener('visibilitychange', () => {
+        paused = document.visibilityState != 'visible'
+        prevFrameTime = performance.now()
+        printd(`paused: ${paused}`)
+    })
+
     state.scene = new Scene();
-    const controls = setActiveControls(EBrickscapeControlsType.Hero)
+    setActiveControls(EBrickscapeControlsType.Eagle)
     const environment = new Environment()
     const map = state.map = new MapManager()
 
     renderer.initialize()
 
     // RENDER LOOP
-    let prevFrameTime = performance.now();
+    
     function render() {
         requestAnimationFrame(render);
 
-        let now = performance.now();
-        let timeDelta = (now - prevFrameTime) / 1000
-        let frameDelta = (timeDelta / (1 / 60))
-        state.frameDelta = frameDelta
-        state.timeDelta = timeDelta
-        prevFrameTime = now
-
-        updateGlobalUniforms()
-        environment.update()
-        map.update()
-        controls.update()
-        renderer.render();
+        if (!paused) {
+            let now = performance.now();
+            let timeDelta = (now - prevFrameTime) / 1000
+            let frameDelta = (timeDelta / (1 / 60))
+            state.frameDelta = frameDelta
+            state.timeDelta = timeDelta
+            prevFrameTime = now
+            
+            updateGlobalUniforms()
+            environment.update()
+            map.update()
+            state.controls.update()
+            renderer.render();
+        }
     }
 
     createGui()

@@ -12,12 +12,13 @@ export enum EBrickscapeControlsType {
 }
 
 export interface IBrickscapeControls {
+    infoWidget: string
     getAnchorPosition(): Vector3
+    setAnchorPosition(pos: Vector3): void
     update()
     camera: PerspectiveCamera
     setAspectRatio(value: number)
     enabled: boolean
-    reset()
 }
 
 export class BrickscapeEagleControls extends MapControls implements IBrickscapeControls {
@@ -26,14 +27,6 @@ export class BrickscapeEagleControls extends MapControls implements IBrickscapeC
         BrickscapeEagleControls.instance = BrickscapeEagleControls.instance ?? new BrickscapeEagleControls();
         return BrickscapeEagleControls.instance;
     }
-    camera: PerspectiveCamera;
-    override enabled: boolean = false
-
-    _groundPlane = new Plane(new Vector3(0, 1, 0), 0);
-    _intersection = new Vector3();
-    _raycaster = new Raycaster();
-    _nearClip = 0.1
-    _farClip = 1000
 
     constructor() {
         let camera = new PerspectiveCamera(80, 1, 0.1, 1000)
@@ -44,13 +37,23 @@ export class BrickscapeEagleControls extends MapControls implements IBrickscapeC
         this.minDistance = 20;
         this.maxDistance = 100;
         this.maxPolarAngle = (Math.PI / 2.5);
-        this.maxPolarAngle = (Math.PI);
+        // this.maxPolarAngle = (Math.PI);
         this.enableDamping = false
         this.dampingFactor = 0.005
         this.panSpeed = 0.5
 
         this.enabled = false
     }
+
+    camera: PerspectiveCamera;
+    override enabled: boolean = false
+    _groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+    _intersection = new Vector3();
+    _raycaster = new Raycaster();
+    _nearClip = 0.1
+    _farClip = 1000
+    infoWidget: string = "eagle";
+
     setAspectRatio(value: number) {
         this.camera.aspect = value
         this.camera.updateProjectionMatrix()
@@ -58,6 +61,13 @@ export class BrickscapeEagleControls extends MapControls implements IBrickscapeC
 
     getAnchorPosition(): Vector3 {
         return this._getCameraLookIntersection(this.camera);
+    }
+    setAnchorPosition(pos: Vector3): void {
+        this.target.copy(pos)
+        this.object.position.set(pos.x, state.worldHeight, pos.z - state.worldHeight)
+        this.object.position.y = state.worldHeight
+        console.log(this)
+        // throw new Error('Method not implemented.');
     }
 
     _getCameraLookIntersection(camera) {
@@ -74,33 +84,7 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
         return BrickscapeHeroControls.instance;
     }
 
-    _moveForward: boolean = false
-    _moveBackward: boolean = false
-    _moveLeft: boolean = false
-    _moveRight: boolean = false
-    _canJump: boolean = false
-    _onObject: boolean = false
-    _velocity: Vector3
-    _direction: Vector3
-    _heroHeight: number = 2
-    _eyesElevation: number = 2
-    _walkVelocity: number = 30
-    _runVelocity: number = 60
-    _walkFov = 72
-    _runFov = 90
 
-    _jumpImpulse: number = 16
-    _fallingVelocity: number = 6
-    _isRunning: boolean
-
-    _currentFov = 80
-    _currentMovementVelocity = 0
-
-
-    enabled: boolean = false
-    override camera: PerspectiveCamera
-
-    _bodyBlocksTangibility: number[]
 
     constructor() {
         let camera = new PerspectiveCamera(60, 1, 0.001, 1000)
@@ -129,6 +113,35 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
         this._jump = throttle(this._jump.bind(this), 1000 / 5, { leading: true })
         state.scene.add(this.getObject())
     }
+
+    infoWidget: string = "hero";
+    _moveForward: boolean = false
+    _moveBackward: boolean = false
+    _moveLeft: boolean = false
+    _moveRight: boolean = false
+    _canJump: boolean = false
+    _onObject: boolean = false
+    _velocity: Vector3
+    _direction: Vector3
+    _heroHeight: number = 2
+    _eyesElevation: number = 2
+    _walkVelocity: number = 30
+    _runVelocity: number = 60
+    _walkFov = 72
+    _runFov = 90
+
+    _jumpImpulse: number = 16
+    _fallingVelocity: number = 6
+    _isRunning: boolean
+
+    _currentFov = 80
+    _currentMovementVelocity = 0
+
+    enabled: boolean = false
+    override camera: PerspectiveCamera
+
+    _bodyBlocksTangibility: number[]
+
     reset() {
         this.camera.position.y = state.worldHeight;
     }
@@ -138,6 +151,10 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
     }
     getAnchorPosition(): Vector3 {
         return this.camera.position;
+    }
+    setAnchorPosition(pos: Vector3): void {
+        this.camera.position.copy(pos)
+        this.camera.position.y = state.worldHeight
     }
     _onKeyDown(event) {
         if (this.enabled) {
@@ -227,14 +244,12 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
     get _footBlocksTangibilityWeighted(): number {
         let w =
             this._bodyBlocksTangibility[0] * 1 -
-            this._bodyBlocksTangibility[1] * 0.5 -
-            this._bodyBlocksTangibility[2] * 0.25
-        return w
+            this._bodyBlocksTangibility[1] * 0.5
+        return clamp(w, 0, 1)
     }
     get _bubbleForce(): number {
         return clamp(Math.pow((this._bodyBlocksTangibility[0] +
-            this._bodyBlocksTangibility[1] +
-            this._bodyBlocksTangibility[2]) * 4, 4), 0, state.worldHeight * 2)
+            this._bodyBlocksTangibility[1] * 2) * 4, 4), 0, state.worldHeight * 2)
     }
     get _aboveHeadBlockTangibility(): number {
         return this._bodyBlocksTangibility[3]
@@ -247,10 +262,10 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
             let object = this.getObject()
             let position = object.position
 
-
             let targetWalkVelocity = this._isRunning ? this._runVelocity : this._walkVelocity
             // console.log(currentTangibility)
             let targetFallVelocity = lerp(this._fallingVelocity, 0, Math.pow(this._footBlocksTangibilityWeighted, 0.1))
+            // let targetFallVelocity = lerp(this._fallingVelocity, 0, Math.pow(this._footBlocksTangibilityWeighted, 0.1))
 
             // console.log(this._footBlocksTangibilityWeighted)
 
@@ -267,6 +282,10 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
             } else {
                 this._velocity.y -= 9.8 * targetFallVelocity * delta * (1 - this._bubbleForce); // 100.0 = mass
                 this._velocity.y = clamp(this._velocity.y, this._velocity.y, 0)
+            }
+
+            if (isNaN(this._velocity.y)) {
+                debugger
             }
 
             this._direction.z = Number(this._moveForward) - Number(this._moveBackward);
@@ -313,8 +332,10 @@ export function getControlsOfType(type: EBrickscapeControlsType) {
     }
 }
 
-export function setActiveControls(type: EBrickscapeControlsType): IBrickscapeControls {
+export function setActiveControls(type: EBrickscapeControlsType): void {
+    let prevAnchorPosition: Vector3 = new Vector3(0, 0, 0)
     if (state.controls) {
+        prevAnchorPosition = state.controls.getAnchorPosition()
         state.controls.enabled = false
         state.controls.update()
     }
@@ -322,8 +343,11 @@ export function setActiveControls(type: EBrickscapeControlsType): IBrickscapeCon
     printd(`setActiveControls: ${type}`)
 
     let controls = state.controls = getControlsOfType(type)
-    controls.reset()
+    controls.setAnchorPosition(prevAnchorPosition)
     state.renderer.reset()
+
+    document.querySelectorAll('.help-box').forEach((el: HTMLElement) => { el.style.visibility = "hidden"; });
+    (document.querySelector(`.help-box.${controls.infoWidget}`) as HTMLElement).style.visibility = 'visible';
+
     state.controls.enabled = true
-    return state.controls
 }

@@ -41,7 +41,7 @@ export function createGui() {
 
     controlsFolder.addButton({
         title: 'Hero View',
-        label: "(in test)"
+        label: "(Beta)"
     }).on('click', ()=>{
         setActiveControls(EBrickscapeControlsType.Hero)
     })
