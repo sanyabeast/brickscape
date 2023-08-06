@@ -279,6 +279,9 @@ export class BlockManager {
     }
 
     getTangibilityAtPosition(x: number, y: number, z: number) {
+        if (y < 0) return 1
+        if (y > state.worldHeight) return 0
+
         x = Math.floor(x)
         y = Math.floor(y)
         z = Math.floor(z)

@@ -82,15 +82,15 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
     _onObject: boolean = false
     _velocity: Vector3
     _direction: Vector3
-    _maxElevation: number = 0
+    _heroHeight: number = 2
     _eyesElevation: number = 2
     _walkVelocity: number = 30
     _runVelocity: number = 60
     _walkFov = 72
     _runFov = 90
 
-    _jumpImpulse: number = 10
-    _fallingVelocity: number = 5
+    _jumpImpulse: number = 16
+    _fallingVelocity: number = 6
     _isRunning: boolean
 
     _currentFov = 80
@@ -211,14 +211,13 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
             }
         }
     }
-    _updateBodyBlocksTangibility() {
+    _updateLocalBlocksData() {
         let position = this.camera.position
         this._bodyBlocksTangibility = [
-            blockManager.getTangibilityAtPosition(position.x, position.y - 2, position.z),
-            blockManager.getTangibilityAtPosition(position.x, position.y - 1, position.z),
-            blockManager.getTangibilityAtPosition(position.x, position.y + 0, position.z),
-            blockManager.getTangibilityAtPosition(position.x, position.y + 1, position.z),
-            blockManager.getTangibilityAtPosition(position.x, position.y + 2, position.z),
+            blockManager.getTangibilityAtPosition(position.x + 0.5, position.y - 2, position.z + 0.5),
+            blockManager.getTangibilityAtPosition(position.x + 0.5, position.y - 1, position.z + 0.5),
+            blockManager.getTangibilityAtPosition(position.x + 0.5, position.y + 0, position.z + 0.5),
+            blockManager.getTangibilityAtPosition(position.x + 0.5, position.y + 1, position.z + 0.5),
         ]
 
     }
@@ -226,34 +225,49 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
         return this._bodyBlocksTangibility[0]
     }
     get _footBlocksTangibilityWeighted(): number {
-        let w = this._bodyBlocksTangibility[0] - (this._bodyBlocksTangibility[1] * 0.5) - (this._bodyBlocksTangibility[2] * 0.25)
+        let w =
+            this._bodyBlocksTangibility[0] * 1 -
+            this._bodyBlocksTangibility[1] * 0.5 -
+            this._bodyBlocksTangibility[2] * 0.25
         return w
     }
+    get _bubbleForce(): number {
+        return clamp(Math.pow((this._bodyBlocksTangibility[0] +
+            this._bodyBlocksTangibility[1] +
+            this._bodyBlocksTangibility[2]) * 4, 4), 0, state.worldHeight * 2)
+    }
     get _aboveHeadBlockTangibility(): number {
-        return this._bodyBlocksTangibility[4]
+        return this._bodyBlocksTangibility[3]
     }
     update() {
 
         if (this.enabled) {
-            this._updateBodyBlocksTangibility()
+            this._updateLocalBlocksData()
             let delta = state.timeDelta
             let object = this.getObject()
             let position = object.position
-            let maxElevation = clamp(blockManager.getElevationAtPosition(position.x, position.y, position.z, 0.5), 0, state.worldHeight)
 
 
             let targetWalkVelocity = this._isRunning ? this._runVelocity : this._walkVelocity
             // console.log(currentTangibility)
             let targetFallVelocity = lerp(this._fallingVelocity, 0, Math.pow(this._footBlocksTangibilityWeighted, 0.1))
 
+            // console.log(this._footBlocksTangibilityWeighted)
 
             this._currentMovementVelocity = slide(this._currentMovementVelocity, targetWalkVelocity, 100 * delta);
-            this._maxElevation = slide(this._maxElevation, maxElevation, 10 * delta);
 
             this._velocity.x -= this._velocity.x * 10.0 * delta;
             this._velocity.z -= this._velocity.z * 10.0 * delta;
 
-            this._velocity.y -= 9.8 * targetFallVelocity * delta; // 100.0 = mass
+            // console.log(this._bubbleForce, this._currentMovementVelocity, targetFallVelocity, targetWalkVelocity)
+
+            if (this._bubbleForce > 0) {
+                this._velocity.y += 9.8 * targetFallVelocity * delta * this._bubbleForce; // 100.0 = mass
+                this._velocity.y = clamp(this._velocity.y, 0, this._velocity.y)
+            } else {
+                this._velocity.y -= 9.8 * targetFallVelocity * delta * (1 - this._bubbleForce); // 100.0 = mass
+                this._velocity.y = clamp(this._velocity.y, this._velocity.y, 0)
+            }
 
             this._direction.z = Number(this._moveForward) - Number(this._moveBackward);
             this._direction.x = Number(this._moveRight) - Number(this._moveLeft);
@@ -269,9 +283,9 @@ export class BrickscapeHeroControls extends PointerLockControls implements IBric
             this._canJump = this._footBlocksTangibilityWeighted > 0
 
             // z-reset
-            if (object.position.y < this._maxElevation + 2) {
+            if (object.position.y < 0 + this._heroHeight) {
                 this._velocity.y = 0;
-                object.position.y = this._maxElevation + 2;
+                object.position.y = 0 + 2;
                 this._canJump = true;
             }
 
