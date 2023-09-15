@@ -1,18 +1,12 @@
 # brickscape
 
-See [demo](https://sanyabeast.github.io/brickscape/dist/).
+[Demo](https://sanyabeast.github.io/brickscape/dist/)
 
-## project setup
+[Info](https://sanyabeast.github.io/chronicle/dist/index.html#/applet/brickscape_demo)
+
+## basic project management
 ```
 npm install
-```
-
-### compiles and hot-reloads for development
-```
 npm start
-```
-
-### compiles and minifies for production
-```
 npm run build
 ```
